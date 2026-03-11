@@ -33,3 +33,10 @@ output/
 # Cache dirs
 .cache/
 .config/
+# Multi-agent Skills
+.agents/
+.agent/
+.claude/
+skills/
+skills-lock.json
+
