@@ -9,6 +9,8 @@ services:
     environment:
       - OLLAMA_HOST=http://host.docker.internal:11434
       - OLLAMA_MODEL=qwen3.5:9b
+      - YOLO_CONFIG_DIR=/tmp/Ultralytics
+      - MPLCONFIGDIR=/tmp/matplotlib
     volumes:
       - .:/app
       - /app/__pycache__
