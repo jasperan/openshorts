@@ -6,6 +6,7 @@ tqdm
 yt-dlp
 faster-whisper
 google-genai
+ollama
 python-dotenv
 mediapipe==0.10.14
 boto3

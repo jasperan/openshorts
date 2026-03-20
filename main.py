@@ -15,12 +15,8 @@ from tqdm import tqdm
 import yt_dlp
 import mediapipe as mp
 # import whisper (replaced by faster_whisper inside function)
-from google import genai
 from dotenv import load_dotenv
 import json
-
-import warnings
-warnings.filterwarnings("ignore", category=UserWarning, module='google.protobuf')
 
 # Load environment variables
 load_dotenv()
@@ -795,22 +791,9 @@ def transcribe_video(video_path):
     }
 
 def get_viral_clips(transcript_result, video_duration):
-    print("🤖  Analyzing with Gemini...")
-    
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        print("❌ Error: GEMINI_API_KEY not found in environment variables.")
-        return None
+    print("🤖  Analyzing with AI (Ollama)...")
+    from llm_client import generate_json
 
-
-    client = genai.Client(api_key=api_key)
-    
-    # We use gemini-2.5-flash as requested.
-    model_name = 'gemini-2.5-flash' 
-    
-    print(f"🤖  Initializing Gemini with model: {model_name}")
-
-    # Extract words
     words = []
     for segment in transcript_result['segments']:
         for word in segment.get('words', []):
@@ -827,63 +810,10 @@ def get_viral_clips(transcript_result, video_duration):
     )
 
     try:
-        response = client.models.generate_content(
-            model=model_name,
-            contents=prompt
-        )
-        
-        # --- Cost Calculation ---
-        try:
-            usage = response.usage_metadata
-            if usage:
-                # Gemini 2.5 Flash Pricing (Dec 2025)
-                # Input: $0.10 per 1M tokens
-                # Output: $0.40 per 1M tokens
-                
-                input_price_per_million = 0.10
-                output_price_per_million = 0.40
-                
-                prompt_tokens = usage.prompt_token_count
-                output_tokens = usage.candidates_token_count
-                
-                input_cost = (prompt_tokens / 1_000_000) * input_price_per_million
-                output_cost = (output_tokens / 1_000_000) * output_price_per_million
-                total_cost = input_cost + output_cost
-                
-                cost_analysis = {
-                    "input_tokens": prompt_tokens,
-                    "output_tokens": output_tokens,
-                    "input_cost": input_cost,
-                    "output_cost": output_cost,
-                    "total_cost": total_cost,
-                    "model": model_name
-                }
-
-                print(f"💰 Token Usage ({model_name}):")
-                print(f"   - Input Tokens: {prompt_tokens} (${input_cost:.6f})")
-                print(f"   - Output Tokens: {output_tokens} (${output_cost:.6f})")
-                print(f"   - Total Estimated Cost: ${total_cost:.6f}")
-                
-        except Exception as e:
-            print(f"⚠️ Could not calculate cost: {e}")
-            cost_analysis = None
-        # ------------------------
-
-        # Clean response if it contains markdown code blocks
-        text = response.text
-        if text.startswith("```json"):
-            text = text[7:]
-        if text.endswith("```"):
-            text = text[:-3]
-        text = text.strip()
-        
-        result_json = json.loads(text)
-        if cost_analysis:
-            result_json['cost_analysis'] = cost_analysis
-            
+        result_json = generate_json(prompt)
         return result_json
     except Exception as e:
-        print(f"❌ Gemini Error: {e}")
+        print(f"❌ LLM Error: {e}")
         return None
 
 if __name__ == '__main__':

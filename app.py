@@ -315,8 +315,7 @@ async def process_endpoint(
     url: Optional[str] = Form(None)
 ):
     api_key = request.headers.get("X-Gemini-Key")
-    if not api_key:
-        raise HTTPException(status_code=400, detail="Missing X-Gemini-Key header")
+    # Gemini key optional - core pipeline uses local Ollama
     
     # Handle JSON body manually for URL payload
     content_type = request.headers.get("content-type", "")
@@ -334,7 +333,8 @@ async def process_endpoint(
     # Prepare Command
     cmd = ["python", "-u", "main.py"] # -u for unbuffered
     env = os.environ.copy()
-    env["GEMINI_API_KEY"] = api_key # Override with key from request
+    if api_key:
+        env["GEMINI_API_KEY"] = api_key  # Override with key from request
     
     if url:
         cmd.extend(["-u", url])

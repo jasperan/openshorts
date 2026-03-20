@@ -3,7 +3,12 @@ services:
     build: .
     container_name: openshorts-backend
     ports:
-      - "8000:8000"
+      - "8001:8000"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - OLLAMA_HOST=http://host.docker.internal:11434
+      - OLLAMA_MODEL=qwen3.5:9b
     volumes:
       - .:/app
       - /app/__pycache__
