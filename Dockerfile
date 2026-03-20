@@ -54,9 +54,9 @@ RUN chown -R appuser:appuser /app /tmp/Ultralytics
 # Switch to non-root user
 USER appuser
 
-# Pre-download YOLO model to persistent cache (survives volume mount over /app)
+# Pre-download YOLO model to /tmp (survives volume mount over /app)
 ENV YOLO_CONFIG_DIR=/tmp/Ultralytics
-RUN python -c "import os; os.environ['YOLO_CONFIG_DIR']='/tmp/Ultralytics'; from ultralytics import YOLO; YOLO('yolov8n.pt')"
+RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')" && cp /app/yolov8n.pt /tmp/Ultralytics/yolov8n.pt
 
 # Expose FastAPI port
 EXPOSE 8000

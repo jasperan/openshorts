@@ -64,7 +64,7 @@ OUTPUT — RETURN ONLY VALID JSON (no markdown, no comments). Order clips by pre
 """
 
 # Load the YOLO model once (Keep for backup or scene analysis if needed)
-model = YOLO('yolov8n.pt')
+model = YOLO(os.environ.get('YOLO_MODEL_PATH', '/tmp/Ultralytics/yolov8n.pt'))
 
 # --- MediaPipe Setup ---
 # Use standard Face Detection (BlazeFace) for speed
