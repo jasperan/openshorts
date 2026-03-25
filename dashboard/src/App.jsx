@@ -540,7 +540,7 @@ function App() {
                   </div>
                   <div className="p-3 bg-white/5 rounded-lg border border-white/5">
                     <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Vision Model</span>
-                    <p className="text-sm text-white font-mono mt-1">qwen2.5-vl:7b</p>
+                    <p className="text-sm text-white font-mono mt-1">minicpm-v</p>
                   </div>
                 </div>
               </div>

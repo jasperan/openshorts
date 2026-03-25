@@ -46,17 +46,23 @@ COPY . .
 # Create a non-root user (Moved up)
 RUN groupadd -r appuser && useradd -r -g appuser -d /app -s /sbin/nologin appuser
 
-# Create directories including Ultralytics cache config
-RUN mkdir -p /app/uploads /app/output /tmp/Ultralytics
-# Fix permissions: /app for code/uploads, /tmp/Ultralytics for AI cache
-RUN chown -R appuser:appuser /app /tmp/Ultralytics
+# Create directories including Ultralytics cache config and HF cache
+RUN mkdir -p /app/uploads /app/output /tmp/Ultralytics /tmp/hf_cache
+# Fix permissions: /app for code/uploads, /tmp dirs for AI cache
+RUN chown -R appuser:appuser /app /tmp/Ultralytics /tmp/hf_cache
+
+# Set HF cache to writable /tmp dir (survives volume mount over /app)
+ENV HF_HOME=/tmp/hf_cache
+ENV YOLO_CONFIG_DIR=/tmp/Ultralytics
 
 # Switch to non-root user
 USER appuser
 
 # Pre-download YOLO model to /tmp (survives volume mount over /app)
-ENV YOLO_CONFIG_DIR=/tmp/Ultralytics
 RUN python -c "from ultralytics import YOLO; YOLO('yolov8n.pt')" && cp /app/yolov8n.pt /tmp/Ultralytics/yolov8n.pt
+
+# Pre-download faster-whisper model so it's cached at build time
+RUN python -c "from faster_whisper import WhisperModel; WhisperModel('base', device='cpu', compute_type='int8')"
 
 # Expose FastAPI port
 EXPOSE 8000

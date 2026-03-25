@@ -8,7 +8,7 @@ import ollama
 
 
 DEFAULT_MODEL = os.environ.get("OLLAMA_MODEL", "qwen3.5:9b")
-DEFAULT_VISION_MODEL = os.environ.get("OLLAMA_VISION_MODEL", "qwen2.5-vl:7b")
+DEFAULT_VISION_MODEL = os.environ.get("OLLAMA_VISION_MODEL", "minicpm-v")
 OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
 

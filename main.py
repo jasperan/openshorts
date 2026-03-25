@@ -886,50 +886,27 @@ def remove_silence(video_path, transcript, output_path, min_silence_duration=0.3
     segments_file = output_path + ".segments.txt"
     temp_segments = []
 
-    for i, (start, end) in enumerate(speech_segments):
-        seg_path = output_path + f".seg{i}.mp4"
-        cmd = [
-            "ffmpeg", "-y",
-            "-ss", str(start), "-to", str(end),
-            "-i", video_path,
-            "-c", "copy", "-avoid_negative_ts", "make_zero",
-            seg_path,
-        ]
-        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        if os.path.exists(seg_path) and os.path.getsize(seg_path) > 0:
-            temp_segments.append(seg_path)
+    # Use a single FFmpeg select filter instead of segment-and-concat
+    # Build a select expression that keeps only speech segments
+    select_parts = []
+    for start, end in speech_segments:
+        select_parts.append(f"between(t,{start:.3f},{end:.3f})")
+    select_expr = "+".join(select_parts)
 
-    if not temp_segments:
-        print("⚠️ No segments extracted, keeping original")
-        return video_path
-
-    # Write concat file
-    with open(segments_file, "w") as f:
-        for seg in temp_segments:
-            f.write(f"file '{seg}'\n")
-
-    # Concatenate segments
-    concat_cmd = [
-        "ffmpeg", "-y", "-f", "concat", "-safe", "0",
-        "-i", segments_file,
-        "-c", "copy",
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", video_path,
+        "-vf", f"select='{select_expr}',setpts=N/FRAME_RATE/TB",
+        "-af", f"aselect='{select_expr}',asetpts=N/SR/TB",
+        "-c:v", "libx264", "-preset", "fast", "-crf", "18",
+        "-c:a", "aac",
         output_path,
     ]
-    result = subprocess.run(concat_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-
-    # Cleanup temp files
-    for seg in temp_segments:
-        try:
-            os.remove(seg)
-        except OSError:
-            pass
-    try:
-        os.remove(segments_file)
-    except OSError:
-        pass
+    result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
 
     if result.returncode != 0 or not os.path.exists(output_path):
-        print(f"⚠️ Silence removal failed, keeping original")
+        stderr = result.stderr.decode(errors="replace")[-300:] if result.stderr else "unknown"
+        print(f"⚠️ Silence removal failed: {stderr}")
         return video_path
 
     print(f"✅ Silence removed: {video_duration:.1f}s → {total_speech:.1f}s")
@@ -1023,8 +1000,26 @@ if __name__ == '__main__':
         
         if not clips_data or 'shorts' not in clips_data:
             print("❌ Failed to identify clips. Converting whole video as fallback.")
-            output_file = os.path.join(output_dir, f"{video_title}_vertical.mp4")
+            clip_filename = f"{video_title}_clip_1.mp4"
+            output_file = os.path.join(output_dir, clip_filename)
             process_video_to_vertical(input_video, output_file)
+
+            # Save fallback metadata so the API can find the result
+            fallback_data = {
+                "shorts": [{
+                    "start": 0,
+                    "end": duration,
+                    "video_title_for_youtube_short": video_title[:100],
+                    "video_description_for_tiktok": "Full video clip",
+                    "video_description_for_instagram": "Full video clip",
+                    "viral_hook_text": "",
+                }],
+                "transcript": transcript,
+            }
+            metadata_file = os.path.join(output_dir, f"{video_title}_metadata.json")
+            with open(metadata_file, 'w') as f:
+                json.dump(fallback_data, f, indent=2)
+            print(f"   Saved fallback metadata to {metadata_file}")
         else:
             print(f"🔥 Found {len(clips_data['shorts'])} viral clips!")
             
