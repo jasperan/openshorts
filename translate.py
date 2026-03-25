@@ -1,15 +1,20 @@
 """
-ElevenLabs Video Translation/Dubbing Module
+Local Video Translation/Dubbing Module
 
-Uses ElevenLabs Dubbing API to translate video audio to different languages.
+Uses edge-tts (Microsoft Edge TTS, no API key) for speech synthesis
+and Ollama for text translation. Fully local, zero cloud dependencies.
 """
 
 import os
-import time
-import httpx
+import asyncio
+import subprocess
+import tempfile
 from typing import Optional
 
-ELEVENLABS_API_BASE = "https://api.elevenlabs.io/v1"
+import edge_tts
+
+import llm_client
+from subtitles import transcribe_audio
 
 # Supported target languages for dubbing
 SUPPORTED_LANGUAGES = {
@@ -46,192 +51,189 @@ SUPPORTED_LANGUAGES = {
     "ta": "Tamil",
 }
 
-
-def create_dubbing_project(
-    video_path: str,
-    target_language: str,
-    api_key: str,
-    source_language: Optional[str] = None,
-) -> dict:
-    """
-    Create a new dubbing project with ElevenLabs.
-
-    Args:
-        video_path: Path to the video file
-        target_language: Target language code (e.g., 'es', 'fr', 'de')
-        api_key: ElevenLabs API key
-        source_language: Source language code (auto-detected if None)
-
-    Returns:
-        dict with dubbing_id and expected_duration_sec
-    """
-    url = f"{ELEVENLABS_API_BASE}/dubbing"
-
-    headers = {
-        "xi-api-key": api_key,
-    }
-
-    # Prepare form data
-    data = {
-        "target_lang": target_language,
-        "mode": "automatic",
-        "num_speakers": "0",
-        "watermark": "false",
-    }
-
-    if source_language:
-        data["source_lang"] = source_language
-
-    # Open and send the video file
-    with open(video_path, "rb") as video_file:
-        files = {
-            "file": (os.path.basename(video_path), video_file, "video/mp4")
-        }
-
-        print(f"[ElevenLabs] Creating dubbing project for {target_language}...")
-        with httpx.Client(timeout=300.0) as client:
-            response = client.post(url, headers=headers, data=data, files=files)
-
-    if response.status_code not in [200, 201]:
-        error_msg = response.text
-        try:
-            error_data = response.json()
-            error_msg = error_data.get("detail", {}).get("message", response.text)
-        except:
-            pass
-        raise Exception(f"ElevenLabs API error: {error_msg}")
-
-    result = response.json()
-    print(f"[ElevenLabs] Dubbing project created: {result.get('dubbing_id')}")
-    return result
+# Best edge-tts voice for each language (natural-sounding neural voices)
+LANGUAGE_VOICES = {
+    "en": "en-US-AriaNeural",
+    "es": "es-ES-ElviraNeural",
+    "fr": "fr-FR-DeniseNeural",
+    "de": "de-DE-KatjaNeural",
+    "it": "it-IT-ElsaNeural",
+    "pt": "pt-BR-FranciscaNeural",
+    "pl": "pl-PL-ZofiaNeural",
+    "hi": "hi-IN-SwaraNeural",
+    "ja": "ja-JP-NanamiNeural",
+    "ko": "ko-KR-SunHiNeural",
+    "zh": "zh-CN-XiaoxiaoNeural",
+    "ar": "ar-SA-ZariyahNeural",
+    "ru": "ru-RU-SvetlanaNeural",
+    "tr": "tr-TR-EmelNeural",
+    "nl": "nl-NL-ColetteNeural",
+    "sv": "sv-SE-SofieNeural",
+    "id": "id-ID-GadisNeural",
+    "fil": "fil-PH-BlessicaNeural",
+    "ms": "ms-MY-YasminNeural",
+    "vi": "vi-VN-HoaiMyNeural",
+    "th": "th-TH-PremwadeeNeural",
+    "uk": "uk-UA-PolinaNeural",
+    "el": "el-GR-AthinaNeural",
+    "cs": "cs-CZ-VlastaNeural",
+    "fi": "fi-FI-SelmaNeural",
+    "ro": "ro-RO-AlinaNeural",
+    "da": "da-DK-ChristelNeural",
+    "bg": "bg-BG-KalinaNeural",
+    "hr": "hr-HR-GabrijelaNeural",
+    "sk": "sk-SK-ViktoriaNeural",
+    "ta": "ta-IN-PallaviNeural",
+}
 
 
-def get_dubbing_status(dubbing_id: str, api_key: str) -> dict:
-    """
-    Check the status of a dubbing project.
-
-    Returns:
-        dict with status ('dubbing', 'dubbed', 'failed') and other metadata
-    """
-    url = f"{ELEVENLABS_API_BASE}/dubbing/{dubbing_id}"
-
-    headers = {
-        "xi-api-key": api_key,
-    }
-
-    with httpx.Client(timeout=30.0) as client:
-        response = client.get(url, headers=headers)
-
-    if response.status_code != 200:
-        raise Exception(f"Failed to get dubbing status: {response.text}")
-
-    return response.json()
-
-
-def download_dubbed_video(
-    dubbing_id: str,
-    target_language: str,
-    output_path: str,
-    api_key: str
-) -> str:
-    """
-    Download the dubbed video file.
-
-    Args:
-        dubbing_id: The dubbing project ID
-        target_language: Target language code
-        output_path: Where to save the dubbed video
-        api_key: ElevenLabs API key
-
-    Returns:
-        Path to the downloaded file
-    """
-    url = f"{ELEVENLABS_API_BASE}/dubbing/{dubbing_id}/audio/{target_language}"
-
-    headers = {
-        "xi-api-key": api_key,
-    }
-
-    print(f"[ElevenLabs] Downloading dubbed video...")
-    with httpx.Client(timeout=120.0) as client:
-        with client.stream("GET", url, headers=headers) as response:
-            if response.status_code != 200:
-                raise Exception(f"Failed to download dubbed video: {response.text}")
-
-            with open(output_path, "wb") as f:
-                for chunk in response.iter_bytes(chunk_size=8192):
-                    f.write(chunk)
-
-    print(f"[ElevenLabs] Dubbed video saved to: {output_path}")
+def _extract_audio(video_path: str, output_path: str) -> str:
+    """Extract audio track from video as WAV."""
+    cmd = [
+        "ffmpeg", "-y", "-i", video_path,
+        "-vn", "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "1",
+        output_path,
+    ]
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
     return output_path
+
+
+def _translate_text(text: str, target_language: str, source_language: Optional[str] = None) -> str:
+    """Translate text using Ollama."""
+    lang_name = SUPPORTED_LANGUAGES.get(target_language, target_language)
+    source_name = SUPPORTED_LANGUAGES.get(source_language, "the original language") if source_language else "the original language"
+
+    prompt = f"""Translate the following text from {source_name} to {lang_name}.
+Return ONLY the translated text, nothing else. Preserve paragraph breaks.
+
+Text to translate:
+{text}"""
+
+    return llm_client.generate_text(prompt)
+
+
+async def _generate_speech_async(text: str, voice: str, output_path: str):
+    """Generate speech from text using edge-tts."""
+    communicate = edge_tts.Communicate(text, voice)
+    await communicate.save(output_path)
+
+
+def _generate_speech(text: str, voice: str, output_path: str):
+    """Sync wrapper for edge-tts speech generation."""
+    try:
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            # We're inside an async context (FastAPI), create a new thread
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor() as pool:
+                future = pool.submit(asyncio.run, _generate_speech_async(text, voice, output_path))
+                future.result()
+        else:
+            loop.run_until_complete(_generate_speech_async(text, voice, output_path))
+    except RuntimeError:
+        asyncio.run(_generate_speech_async(text, voice, output_path))
+
+
+def _merge_audio_video(video_path: str, audio_path: str, output_path: str):
+    """Replace video's audio track with new audio, adjusting speed to match video duration."""
+    # Get video duration
+    probe_cmd = [
+        "ffprobe", "-v", "error", "-show_entries", "format=duration",
+        "-of", "csv=p=0", video_path,
+    ]
+    video_duration = float(subprocess.check_output(probe_cmd).decode().strip())
+
+    # Get audio duration
+    probe_cmd = [
+        "ffprobe", "-v", "error", "-show_entries", "format=duration",
+        "-of", "csv=p=0", audio_path,
+    ]
+    audio_duration = float(subprocess.check_output(probe_cmd).decode().strip())
+
+    # Calculate tempo adjustment (keep within FFmpeg's 0.5-2.0 range)
+    if video_duration > 0 and audio_duration > 0:
+        tempo = audio_duration / video_duration
+        tempo = max(0.5, min(2.0, tempo))
+    else:
+        tempo = 1.0
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", video_path,
+        "-i", audio_path,
+        "-filter_complex", f"[1:a]atempo={tempo:.4f}[a]",
+        "-map", "0:v",
+        "-map", "[a]",
+        "-c:v", "copy",
+        "-c:a", "aac", "-b:a", "192k",
+        "-shortest",
+        output_path,
+    ]
+    subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, check=True)
 
 
 def translate_video(
     video_path: str,
     output_path: str,
     target_language: str,
-    api_key: str,
     source_language: Optional[str] = None,
     max_wait_seconds: int = 600,
     poll_interval: int = 5,
 ) -> str:
     """
-    Translate a video to a target language using ElevenLabs dubbing.
+    Translate a video to a target language using local AI.
 
-    This is a blocking call that waits for the dubbing to complete.
+    Pipeline: transcribe -> translate text -> TTS -> merge audio
 
     Args:
         video_path: Path to input video
         output_path: Path to save translated video
-        target_language: Target language code
-        api_key: ElevenLabs API key
+        target_language: Target language code (e.g., 'es', 'fr', 'de')
         source_language: Source language code (auto-detected if None)
-        max_wait_seconds: Maximum time to wait for dubbing (default 10 min)
-        poll_interval: Seconds between status checks
+        max_wait_seconds: Unused (kept for API compatibility)
+        poll_interval: Unused (kept for API compatibility)
 
     Returns:
         Path to the translated video
     """
-    # Create dubbing project
-    project = create_dubbing_project(
-        video_path=video_path,
-        target_language=target_language,
-        api_key=api_key,
-        source_language=source_language,
-    )
+    print(f"[Translate] Starting local translation to {target_language}...")
 
-    dubbing_id = project["dubbing_id"]
-    expected_duration = project.get("expected_duration_sec", 60)
+    with tempfile.TemporaryDirectory(prefix="openshorts_translate_") as tmpdir:
+        # 1. Transcribe the video
+        print("[Translate] Step 1/4: Transcribing audio...")
+        transcript = transcribe_audio(video_path)
 
-    print(f"[ElevenLabs] Dubbing ID: {dubbing_id}, Expected duration: {expected_duration}s")
+        # Extract full text from transcript
+        full_text = " ".join(
+            seg.get("text", "") for seg in transcript.get("segments", [])
+        ).strip()
 
-    # Poll for completion
-    start_time = time.time()
-    while True:
-        elapsed = time.time() - start_time
-        if elapsed > max_wait_seconds:
-            raise Exception(f"Dubbing timed out after {max_wait_seconds} seconds")
+        if not full_text:
+            raise Exception("No speech detected in video")
 
-        status = get_dubbing_status(dubbing_id, api_key)
-        current_status = status.get("status", "unknown")
+        detected_lang = transcript.get("language", source_language or "en")
+        print(f"[Translate] Detected language: {detected_lang}")
 
-        print(f"[ElevenLabs] Status: {current_status} (elapsed: {int(elapsed)}s)")
+        # 2. Translate the text
+        print(f"[Translate] Step 2/4: Translating to {target_language}...")
+        translated_text = _translate_text(full_text, target_language, source_language or detected_lang)
+        print(f"[Translate] Translated text ({len(translated_text)} chars)")
 
-        if current_status == "dubbed":
-            # Download the result
-            return download_dubbed_video(
-                dubbing_id=dubbing_id,
-                target_language=target_language,
-                output_path=output_path,
-                api_key=api_key,
-            )
+        # 3. Generate speech
+        voice = LANGUAGE_VOICES.get(target_language, "en-US-AriaNeural")
+        print(f"[Translate] Step 3/4: Generating speech with voice {voice}...")
+        tts_audio_path = os.path.join(tmpdir, "tts_output.mp3")
+        _generate_speech(translated_text, voice, tts_audio_path)
 
-        elif current_status == "failed":
-            error = status.get("error", "Unknown error")
-            raise Exception(f"Dubbing failed: {error}")
+        if not os.path.exists(tts_audio_path) or os.path.getsize(tts_audio_path) == 0:
+            raise Exception("TTS generation failed - no audio produced")
 
-        # Still processing, wait and poll again
-        time.sleep(poll_interval)
+        # 4. Merge with original video
+        print("[Translate] Step 4/4: Merging translated audio with video...")
+        _merge_audio_video(video_path, tts_audio_path, output_path)
+
+    print(f"[Translate] Translation complete: {output_path}")
+    return output_path
 
 
 def get_supported_languages() -> dict:

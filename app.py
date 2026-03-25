@@ -401,12 +401,6 @@ async def edit_clip(
     req: EditRequest,
     x_gemini_key: Optional[str] = Header(None, alias="X-Gemini-Key")
 ):
-    # Determine API Key
-    final_api_key = req.api_key or x_gemini_key or os.environ.get("GEMINI_API_KEY")
-    
-    if not final_api_key:
-        raise HTTPException(status_code=400, detail="Missing Gemini API Key (Header or Body)")
-
     if req.job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
     
@@ -743,11 +737,8 @@ async def get_languages():
 @app.post("/api/translate")
 async def translate_clip(
     req: TranslateRequest,
-    x_elevenlabs_key: Optional[str] = Header(None, alias="X-ElevenLabs-Key")
 ):
-    """Translate a video clip to a different language using ElevenLabs dubbing."""
-    if not x_elevenlabs_key:
-        raise HTTPException(status_code=400, detail="Missing X-ElevenLabs-Key header")
+    """Translate a video clip to a different language using local AI (edge-tts + Ollama)."""
 
     if req.job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -793,7 +784,6 @@ async def translate_clip(
                 video_path=input_path,
                 output_path=output_path,
                 target_language=req.target_language,
-                api_key=x_elevenlabs_key,
                 source_language=req.source_language,
             )
 
