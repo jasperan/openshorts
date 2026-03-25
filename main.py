@@ -24,44 +24,17 @@ load_dotenv()
 # --- Constants ---
 ASPECT_RATIO = 9 / 16
 
-GEMINI_PROMPT_TEMPLATE = """
-You are a senior short-form video editor. Read the ENTIRE transcript and word-level timestamps to choose the 3–15 MOST VIRAL moments for TikTok/IG Reels/YouTube Shorts. Each clip must be between 15 and 60 seconds long.
+CLIP_PROMPT_TEMPLATE = """Pick 3-5 viral moments from this video transcript for TikTok/YouTube Shorts. Each clip: 15-60 seconds.
 
-⚠️ FFMPEG TIME CONTRACT — STRICT REQUIREMENTS:
-- Return timestamps in ABSOLUTE SECONDS from the start of the video (usable in: ffmpeg -ss <start> -to <end> -i <input> ...).
-- Only NUMBERS with decimal point, up to 3 decimals (examples: 0, 1.250, 17.350).
-- Ensure 0 ≤ start < end ≤ VIDEO_DURATION_SECONDS.
-- Each clip between 15 and 60 s (inclusive).
-- Prefer starting 0.2–0.4 s BEFORE the hook and ending 0.2–0.4 s AFTER the payoff.
-- Use silence moments for natural cuts; never cut in the middle of a word or phrase.
-- STRICTLY FORBIDDEN to use time formats other than absolute seconds.
+Video duration: {video_duration}s
 
-VIDEO_DURATION_SECONDS: {video_duration}
+Transcript with timestamps:
+{segments_text}
 
-TRANSCRIPT_TEXT (raw):
-{transcript_text}
+Return ONLY valid JSON:
+{{"shorts":[{{"start":0,"end":30,"video_title_for_youtube_short":"title","video_description_for_tiktok":"desc","video_description_for_instagram":"desc","viral_hook_text":"hook text"}}]}}
 
-WORDS_JSON (array of {{w, s, e}} where s/e are seconds):
-{words_json}
-
-STRICT EXCLUSIONS:
-- No generic intros/outros or purely sponsorship segments unless they contain the hook.
-- No clips < 15 s or > 60 s.
-
-OUTPUT — RETURN ONLY VALID JSON (no markdown, no comments). Order clips by predicted performance (best to worst). In the descriptions, ALWAYS include a CTA like "Follow me and comment X and I'll send you the workflow" (especially if discussing an n8n workflow):
-{{
-  "shorts": [
-    {{
-      "start": <number in seconds, e.g., 12.340>,
-      "end": <number in seconds, e.g., 37.900>,
-      "video_description_for_tiktok": "<description for TikTok oriented to get views>",
-      "video_description_for_instagram": "<description for Instagram oriented to get views>",
-      "video_title_for_youtube_short": "<title for YouTube Short oriented to get views 100 chars max>",
-      "viral_hook_text": "<SHORT punchy text overlay (max 10 words). MUST BE IN THE SAME LANGUAGE AS THE VIDEO TRANSCRIPT. Examples: 'POV: You realized...', 'Did you know?', 'Stop doing this!'>"
-    }}
-  ]
-}}
-"""
+Rules: start/end in seconds. 0 <= start < end <= {video_duration}. Each clip 15-60s. Order by viral potential."""
 
 # Load the YOLO model once (Keep for backup or scene analysis if needed)
 model = YOLO(os.environ.get('YOLO_MODEL_PATH', '/tmp/Ultralytics/yolov8n.pt'))
@@ -790,48 +763,110 @@ def transcribe_video(video_path):
         'language': info.language
     }
 
+def _rule_based_clips(transcript_result, video_duration):
+    """Fallback: generate clips from transcript segments without LLM."""
+    segments = transcript_result.get('segments', [])
+    if not segments:
+        return None
+
+    # Build candidate windows of 20-45 seconds from segment boundaries
+    candidates = []
+    i = 0
+    while i < len(segments):
+        start = segments[i]['start']
+        text_parts = []
+        j = i
+        while j < len(segments) and segments[j]['end'] - start < 45:
+            text_parts.append(segments[j].get('text', '').strip())
+            j += 1
+        end = segments[min(j, len(segments)) - 1]['end']
+        duration = end - start
+
+        if 15 <= duration <= 60 and len(text_parts) >= 2:
+            # Score by word density (more words = more engaging)
+            total_words = sum(len(t.split()) for t in text_parts)
+            score = total_words / max(duration, 1)
+            text = " ".join(text_parts).strip()
+            candidates.append({
+                'start': round(start, 2),
+                'end': round(end, 2),
+                'text': text[:200],
+                'score': score,
+            })
+        i = max(i + 1, i + len(text_parts) // 2)
+
+    if not candidates:
+        return None
+
+    # Pick top 3-5 by word density, non-overlapping
+    candidates.sort(key=lambda c: c['score'], reverse=True)
+    selected = []
+    for c in candidates:
+        overlaps = any(not (c['end'] <= s['start'] or c['start'] >= s['end']) for s in selected)
+        if not overlaps:
+            selected.append(c)
+        if len(selected) >= 5:
+            break
+
+    if not selected:
+        return None
+
+    shorts = []
+    for i, c in enumerate(selected):
+        hook_words = c['text'].split()[:8]
+        shorts.append({
+            'start': c['start'],
+            'end': c['end'],
+            'video_title_for_youtube_short': c['text'][:100],
+            'video_description_for_tiktok': c['text'][:200],
+            'video_description_for_instagram': c['text'][:200],
+            'viral_hook_text': " ".join(hook_words),
+        })
+
+    print(f"   📐 Rule-based: found {len(shorts)} clips")
+    return {'shorts': shorts}
+
+
 def get_viral_clips(transcript_result, video_duration):
     print("🤖  Analyzing with AI (Ollama)...")
     from llm_client import generate_json
 
-    words = []
-    for segment in transcript_result['segments']:
-        for word in segment.get('words', []):
-            words.append({
-                'w': word['word'],
-                's': round(word['start'], 2),
-                'e': round(word['end'], 2)
-            })
+    # Build compact segment-level text (no word timestamps)
+    seg_lines = []
+    for seg in transcript_result.get('segments', []):
+        seg_lines.append(f"[{seg['start']:.1f}-{seg['end']:.1f}] {seg.get('text', '').strip()}")
+    segments_text = "\n".join(seg_lines)
 
-    # Limit word-level timestamps to prevent overwhelming the LLM
-    # Keep first/last and sample evenly if too many
-    MAX_WORDS = 500
-    if len(words) > MAX_WORDS:
-        step = len(words) / MAX_WORDS
-        sampled = [words[int(i * step)] for i in range(MAX_WORDS)]
-        print(f"   Sampled {MAX_WORDS}/{len(words)} word timestamps for LLM")
-        words_for_prompt = sampled
-    else:
-        words_for_prompt = words
+    # Truncate if too long (keep ~2000 chars for the LLM)
+    if len(segments_text) > 2000:
+        segments_text = segments_text[:2000] + "\n... (truncated)"
 
-    prompt = GEMINI_PROMPT_TEMPLATE.format(
-        video_duration=video_duration,
-        transcript_text=json.dumps(transcript_result['text']),
-        words_json=json.dumps(words_for_prompt)
+    prompt = CLIP_PROMPT_TEMPLATE.format(
+        video_duration=round(video_duration, 1),
+        segments_text=segments_text,
     )
 
-    # Try up to 2 times with the model
-    for attempt in range(2):
-        try:
-            result_json = generate_json(prompt)
-            if result_json and 'shorts' in result_json:
+    # Try LLM once with the compact prompt
+    try:
+        result_json = generate_json(prompt)
+        if result_json and 'shorts' in result_json and len(result_json['shorts']) > 0:
+            # Validate clips
+            valid = []
+            for clip in result_json['shorts']:
+                s, e = clip.get('start', 0), clip.get('end', 0)
+                if 0 <= s < e <= video_duration and 10 <= (e - s) <= 65:
+                    valid.append(clip)
+            if valid:
+                result_json['shorts'] = valid
+                print(f"   🔥 LLM found {len(valid)} viral clips!")
                 return result_json
-            print(f"   ⚠️ LLM returned data without 'shorts' key (attempt {attempt+1})")
-        except Exception as e:
-            print(f"   ⚠️ LLM attempt {attempt+1} failed: {e}")
+            print("   ⚠️ LLM clips failed validation")
+    except Exception as e:
+        print(f"   ⚠️ LLM failed: {e}")
 
-    print("❌ All LLM attempts failed")
-    return None
+    # Fallback: rule-based clip detection
+    print("   📐 Falling back to rule-based clip detection...")
+    return _rule_based_clips(transcript_result, video_duration)
 
 def remove_silence(video_path, transcript, output_path, min_silence_duration=0.3, padding=0.05):
     """

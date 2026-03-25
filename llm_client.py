@@ -31,7 +31,6 @@ def generate_json(prompt: str, model: str = None) -> dict:
     response = client.chat(
         model=model,
         messages=[{"role": "user", "content": prompt}],
-        format="json",
     )
     text = response["message"]["content"]
 
