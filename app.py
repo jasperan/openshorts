@@ -367,6 +367,37 @@ async def process_endpoint(
     
     return {"job_id": job_id, "status": "queued"}
 
+class BatchProcessRequest(BaseModel):
+    urls: List[str]
+
+@app.post("/api/batch")
+async def batch_process(req: BatchProcessRequest):
+    """Process multiple URLs at once, creating one job per URL."""
+    if not req.urls:
+        raise HTTPException(status_code=400, detail="No URLs provided")
+
+    job_ids = []
+    for url in req.urls:
+        job_id = str(uuid.uuid4())
+        job_output_dir = os.path.join(OUTPUT_DIR, job_id)
+        os.makedirs(job_output_dir, exist_ok=True)
+
+        cmd = ["python", "-u", "main.py", "-u", url, "-o", job_output_dir]
+        env = os.environ.copy()
+
+        jobs[job_id] = {
+            'status': 'queued',
+            'logs': [f"Job {job_id} queued (batch)."],
+            'cmd': cmd,
+            'env': env,
+            'output_dir': job_output_dir,
+        }
+
+        await job_queue.put(job_id)
+        job_ids.append(job_id)
+
+    return {"job_ids": job_ids, "count": len(job_ids), "status": "queued"}
+
 @app.get("/api/status/{job_id}")
 async def get_status(job_id: str):
     if job_id not in jobs:
@@ -393,7 +424,6 @@ class EditRequest(BaseModel):
 @app.post("/api/edit")
 async def edit_clip(
     req: EditRequest,
-    x_gemini_key: Optional[str] = Header(None, alias="X-Gemini-Key")
 ):
     if req.job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
@@ -1400,6 +1430,57 @@ async def thumbnail_publish_status(publish_id: str):
 #     except Exception as e:
 #         print(f"❌ Gallery Error: {e}")
 #         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/models")
+async def get_models():
+    """Check which Ollama models are available."""
+    try:
+        import ollama as ollama_client
+        client = ollama_client.Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
+        models = client.list()
+        model_names = [m.get("name", m.get("model", "")) for m in models.get("models", [])]
+
+        # Check required models
+        text_model = os.environ.get("OLLAMA_MODEL", "qwen3.5:9b")
+        vision_model = os.environ.get("OLLAMA_VISION_MODEL", "qwen2.5-vl:7b")
+
+        return {
+            "available": model_names,
+            "required": {
+                "text": {"model": text_model, "ready": any(text_model in m for m in model_names)},
+                "vision": {"model": vision_model, "ready": any(vision_model in m for m in model_names)},
+            },
+            "ollama_connected": True,
+        }
+    except Exception as e:
+        return {
+            "available": [],
+            "required": {
+                "text": {"model": "qwen3.5:9b", "ready": False},
+                "vision": {"model": "qwen2.5-vl:7b", "ready": False},
+            },
+            "ollama_connected": False,
+            "error": str(e),
+        }
+
+
+@app.post("/api/models/pull")
+async def pull_model(model_name: str = Form(...)):
+    """Pull/download an Ollama model."""
+    try:
+        import ollama as ollama_client
+        client = ollama_client.Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
+
+        def do_pull():
+            client.pull(model_name)
+
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, do_pull)
+
+        return {"success": True, "model": model_name}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 # ═══════════════════════════════════════════════════════════════════════
