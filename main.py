@@ -799,22 +799,39 @@ def get_viral_clips(transcript_result, video_duration):
         for word in segment.get('words', []):
             words.append({
                 'w': word['word'],
-                's': word['start'],
-                'e': word['end']
+                's': round(word['start'], 2),
+                'e': round(word['end'], 2)
             })
+
+    # Limit word-level timestamps to prevent overwhelming the LLM
+    # Keep first/last and sample evenly if too many
+    MAX_WORDS = 500
+    if len(words) > MAX_WORDS:
+        step = len(words) / MAX_WORDS
+        sampled = [words[int(i * step)] for i in range(MAX_WORDS)]
+        print(f"   Sampled {MAX_WORDS}/{len(words)} word timestamps for LLM")
+        words_for_prompt = sampled
+    else:
+        words_for_prompt = words
 
     prompt = GEMINI_PROMPT_TEMPLATE.format(
         video_duration=video_duration,
         transcript_text=json.dumps(transcript_result['text']),
-        words_json=json.dumps(words)
+        words_json=json.dumps(words_for_prompt)
     )
 
-    try:
-        result_json = generate_json(prompt)
-        return result_json
-    except Exception as e:
-        print(f"❌ LLM Error: {e}")
-        return None
+    # Try up to 2 times with the model
+    for attempt in range(2):
+        try:
+            result_json = generate_json(prompt)
+            if result_json and 'shorts' in result_json:
+                return result_json
+            print(f"   ⚠️ LLM returned data without 'shorts' key (attempt {attempt+1})")
+        except Exception as e:
+            print(f"   ⚠️ LLM attempt {attempt+1} failed: {e}")
+
+    print("❌ All LLM attempts failed")
+    return None
 
 def remove_silence(video_path, transcript, output_path, min_silence_duration=0.3, padding=0.05):
     """

@@ -13,7 +13,7 @@ OLLAMA_HOST = os.environ.get("OLLAMA_HOST", "http://localhost:11434")
 
 
 def _get_client():
-    return ollama.Client(host=OLLAMA_HOST)
+    return ollama.Client(host=OLLAMA_HOST, timeout=300)
 
 
 def generate_text(prompt: str, model: str = None) -> str:
@@ -35,6 +35,9 @@ def generate_json(prompt: str, model: str = None) -> dict:
     )
     text = response["message"]["content"]
 
+    if not text or not text.strip():
+        raise ValueError("LLM returned empty response")
+
     # Clean markdown wrappers
     if text.startswith("```json"):
         text = text[7:]
@@ -49,6 +52,8 @@ def generate_json(prompt: str, model: str = None) -> dict:
     end_idx = text.rfind("}")
     if start_idx != -1 and end_idx != -1:
         text = text[start_idx : end_idx + 1]
+    else:
+        raise ValueError(f"No JSON object found in LLM response: {text[:200]}")
 
     return json.loads(text)
 
