@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Youtube, Upload, FileVideo, X } from 'lucide-react';
+import { Youtube, Upload, FileVideo, X, Layers } from 'lucide-react';
 
-export default function MediaInput({ onProcess, isProcessing }) {
-    const [mode, setMode] = useState('url'); // 'url' | 'file'
+export default function MediaInput({ onProcess, onBatch, isProcessing }) {
+    const [mode, setMode] = useState('url'); // 'url' | 'file' | 'batch'
     const [url, setUrl] = useState('');
     const [file, setFile] = useState(null);
+    const [batchUrls, setBatchUrls] = useState('');
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -12,6 +13,11 @@ export default function MediaInput({ onProcess, isProcessing }) {
             onProcess({ type: 'url', payload: url });
         } else if (mode === 'file' && file) {
             onProcess({ type: 'file', payload: file });
+        } else if (mode === 'batch' && batchUrls.trim()) {
+            const urls = batchUrls.split('\n').map(u => u.trim()).filter(u => u.length > 0);
+            if (urls.length > 0 && onBatch) {
+                onBatch(urls);
+            }
         }
     };
 
@@ -46,6 +52,16 @@ export default function MediaInput({ onProcess, isProcessing }) {
                     <Upload size={18} />
                     Upload File
                 </button>
+                <button
+                    onClick={() => setMode('batch')}
+                    className={`flex items-center gap-2 pb-2 px-2 transition-all ${mode === 'batch'
+                        ? 'text-primary border-b-2 border-primary -mb-[17px]'
+                        : 'text-zinc-400 hover:text-white'
+                        }`}
+                >
+                    <Layers size={18} />
+                    Batch URLs
+                </button>
             </div>
 
             <form onSubmit={handleSubmit}>
@@ -59,6 +75,19 @@ export default function MediaInput({ onProcess, isProcessing }) {
                             className="input-field"
                             required
                         />
+                    </div>
+                ) : mode === 'batch' ? (
+                    <div className="space-y-4">
+                        <textarea
+                            value={batchUrls}
+                            onChange={(e) => setBatchUrls(e.target.value)}
+                            placeholder={"Paste one URL per line:\nhttps://www.youtube.com/watch?v=abc\nhttps://www.youtube.com/watch?v=def\nhttps://www.youtube.com/watch?v=ghi"}
+                            className="input-field min-h-[120px] resize-y font-mono text-sm"
+                            rows={5}
+                        />
+                        <p className="text-xs text-zinc-500">
+                            {batchUrls.split('\n').filter(u => u.trim()).length} URLs queued
+                        </p>
                     </div>
                 ) : (
                     <div
@@ -97,7 +126,7 @@ export default function MediaInput({ onProcess, isProcessing }) {
 
                 <button
                     type="submit"
-                    disabled={isProcessing || (mode === 'url' && !url) || (mode === 'file' && !file)}
+                    disabled={isProcessing || (mode === 'url' && !url) || (mode === 'file' && !file) || (mode === 'batch' && !batchUrls.trim())}
                     className="w-full btn-primary mt-6 flex items-center justify-center gap-2"
                 >
                     {isProcessing ? (
@@ -107,7 +136,7 @@ export default function MediaInput({ onProcess, isProcessing }) {
                         </>
                     ) : (
                         <>
-                            Generate Clips
+                            {mode === 'batch' ? `Process ${batchUrls.split('\n').filter(u => u.trim()).length} Videos` : 'Generate Clips'}
                         </>
                     )}
                 </button>

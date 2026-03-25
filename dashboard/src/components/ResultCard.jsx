@@ -5,7 +5,7 @@ import SubtitleModal from './SubtitleModal';
 import HookModal from './HookModal';
 import TranslateModal from './TranslateModal';
 
-export default function ResultCard({ clip, index, jobId, uploadPostKey, uploadUserId, geminiApiKey, elevenLabsKey, onPlay, onPause }) {
+export default function ResultCard({ clip, index, jobId, uploadPostKey, uploadUserId, onPlay, onPause }) {
     const [showModal, setShowModal] = useState(false);
     const [showSubtitleModal, setShowSubtitleModal] = useState(false);
     const videoRef = React.useRef(null);
@@ -47,18 +47,10 @@ export default function ResultCard({ clip, index, jobId, uploadPostKey, uploadUs
         setIsEditing(true);
         setEditError(null);
         try {
-            // Use passed prop or fallback
-            const apiKey = geminiApiKey || localStorage.getItem('gemini_key');
-
-            if (!apiKey) {
-                throw new Error("Gemini API Key is missing. Please set it in Settings.");
-            }
-
             const res = await fetch(getApiUrl('/api/edit'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-Gemini-Key': apiKey
                 },
                 body: JSON.stringify({
                     job_id: jobId,
@@ -183,40 +175,26 @@ export default function ResultCard({ clip, index, jobId, uploadPostKey, uploadUs
     };
 
     const handleTranslate = async (options) => {
-        console.log('[Translate] Starting translation with options:', options);
         setIsTranslating(true);
         setEditError(null);
         try {
-            const apiKey = elevenLabsKey;
-            console.log('[Translate] API Key available:', !!apiKey);
-
-            if (!apiKey) {
-                throw new Error("ElevenLabs API Key is missing. Please set it in Settings.");
-            }
-
             const requestBody = {
                 job_id: jobId,
                 clip_index: index,
                 target_language: options.targetLanguage,
                 input_filename: currentVideoUrl.split('/').pop()
             };
-            console.log('[Translate] Request body:', requestBody);
-            console.log('[Translate] Sending request to /api/translate');
 
             const res = await fetch(getApiUrl('/api/translate'), {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-ElevenLabs-Key': apiKey
                 },
                 body: JSON.stringify(requestBody)
             });
 
-            console.log('[Translate] Response status:', res.status);
-
             if (!res.ok) {
                 const errText = await res.text();
-                console.error('[Translate] Error response:', errText);
                 try {
                     const jsonErr = JSON.parse(errText);
                     throw new Error(jsonErr.detail || errText);
@@ -227,7 +205,6 @@ export default function ResultCard({ clip, index, jobId, uploadPostKey, uploadUs
             }
 
             const data = await res.json();
-            console.log('[Translate] Success response:', data);
             if (data.new_video_url) {
                 setCurrentVideoUrl(getApiUrl(data.new_video_url));
                 if (videoRef.current) {
@@ -237,7 +214,6 @@ export default function ResultCard({ clip, index, jobId, uploadPostKey, uploadUs
             }
 
         } catch (e) {
-            console.error('[Translate] Exception:', e);
             setEditError(e.message);
             setTimeout(() => setEditError(null), 5000);
         } finally {
@@ -602,7 +578,6 @@ export default function ResultCard({ clip, index, jobId, uploadPostKey, uploadUs
                 onTranslate={handleTranslate}
                 isProcessing={isTranslating}
                 videoUrl={currentVideoUrl}
-                hasApiKey={!!elevenLabsKey}
             />
         </div>
     );

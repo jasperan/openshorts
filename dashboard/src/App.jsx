@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, FileVideo, Sparkles, Youtube, Instagram, Share2, LogOut, ChevronDown, Check, Activity, LayoutDashboard, Settings, PlusCircle, History, Menu, X, Terminal, Shield, LayoutGrid, Image, Globe, RotateCcw } from 'lucide-react';
-import KeyInput from './components/KeyInput';
+// KeyInput removed - no API keys needed for core pipeline
 import MediaInput from './components/MediaInput';
 import ResultCard from './components/ResultCard';
 import ProcessingAnimation from './components/ProcessingAnimation';
@@ -133,21 +133,14 @@ const pollJob = async (jobId) => {
 };
 
 function App() {
-  const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_key') || '');
-  // Social API State - Load encrypted or plain
+  // Social API State - Load encrypted or plain (optional, for social posting)
   const [uploadPostKey, setUploadPostKey] = useState(() => {
     const stored = localStorage.getItem('uploadPostKey_v3');
     if (stored) return decrypt(stored);
     return '';
   });
-  // ElevenLabs API State - Load encrypted
-  const [elevenLabsKey, setElevenLabsKey] = useState(() => {
-    const stored = localStorage.getItem('elevenLabsKey_v1');
-    if (stored) return decrypt(stored);
-    return '';
-  });
 
-  // fal.ai API State - Load encrypted
+  // fal.ai API State - Load encrypted (optional, for AI Shorts UGC)
   const [falKey, setFalKey] = useState(() => {
     const stored = localStorage.getItem('falKey_v1');
     if (stored) return decrypt(stored);
@@ -228,12 +221,6 @@ function App() {
   }, [jobId, status, results, activeTab]);
 
   useEffect(() => {
-    // Encrypt Gemini Key too for consistency if desired, but user asked specifically about Social integration not saving well.
-    // For now keeping gemini plain for compatibility unless requested.
-    if (apiKey) localStorage.setItem('gemini_key', apiKey);
-  }, [apiKey]);
-
-  useEffect(() => {
     if (uploadPostKey) {
       localStorage.setItem('uploadPostKey_v3', encrypt(uploadPostKey));
     }
@@ -241,12 +228,6 @@ function App() {
       localStorage.setItem('uploadUserId', uploadUserId);
     }
   }, [uploadPostKey, uploadUserId]);
-
-  useEffect(() => {
-    if (elevenLabsKey) {
-      localStorage.setItem('elevenLabsKey_v1', encrypt(elevenLabsKey));
-    }
-  }, [elevenLabsKey]);
 
   useEffect(() => {
     if (falKey) {
@@ -325,7 +306,7 @@ function App() {
 
     try {
       let body;
-      const headers = { 'X-Gemini-Key': apiKey };
+      let headers = {};
 
       if (data.type === 'url') {
         headers['Content-Type'] = 'application/json';
@@ -338,7 +319,7 @@ function App() {
 
       const res = await fetch(getApiUrl('/api/process'), {
         method: 'POST',
-        headers: data.type === 'url' ? headers : { 'X-Gemini-Key': apiKey },
+        headers,
         body
       });
 
@@ -349,6 +330,32 @@ function App() {
     } catch (e) {
       setStatus('error');
       setLogs(l => [...l, `Error starting job: ${e.message}`]);
+    }
+  };
+
+  const handleBatch = async (urls) => {
+    setStatus('processing');
+    setLogs(["Starting batch processing..."]);
+    setResults(null);
+    setProcessingMedia({ type: 'batch', payload: urls });
+
+    try {
+      const res = await fetch(getApiUrl('/api/batch'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ urls })
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+      const resData = await res.json();
+      // Track the first job for status display
+      if (resData.job_ids && resData.job_ids.length > 0) {
+        setJobId(resData.job_ids[0]);
+        setLogs(prev => [...prev, `Queued ${resData.count} videos for processing`]);
+      }
+    } catch (e) {
+      setStatus('error');
+      setLogs(l => [...l, `Error starting batch: ${e.message}`]);
     }
   };
 
@@ -487,11 +494,7 @@ function App() {
               />
             )}
 
-            {!apiKey && (
-              <span className="text-xs text-amber-500 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
-                API Key Missing
-              </span>
-            )}
+            {/* Local AI - no API keys needed */}
           </div>
         </header>
 
@@ -518,10 +521,29 @@ function App() {
               <div className="flex items-center justify-between mb-8">
                 <h1 className="text-2xl font-bold">Settings</h1>
                 <div className="px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full text-[10px] text-green-400 font-medium flex items-center gap-2">
-                  <Shield size={12} /> Privacy: keys only live in your browser (sent to backend just to process)
+                  <Shield size={12} /> All AI runs locally. No cloud API keys needed.
                 </div>
               </div>
-              <KeyInput onKeySet={setApiKey} savedKey={apiKey} />
+
+              <div className="glass-panel p-6 mb-8">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold">Local AI Engine</h2>
+                  <span className="text-[10px] bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded text-green-400 uppercase tracking-wider">Active</span>
+                </div>
+                <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
+                  OpenShorts uses <strong>Ollama</strong> for AI processing. All models run on your machine. No data leaves your network.
+                </p>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Text Model</span>
+                    <p className="text-sm text-white font-mono mt-1">qwen3.5:9b</p>
+                  </div>
+                  <div className="p-3 bg-white/5 rounded-lg border border-white/5">
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Vision Model</span>
+                    <p className="text-sm text-white font-mono mt-1">qwen2.5-vl:7b</p>
+                  </div>
+                </div>
+              </div>
 
               <div className="glass-panel p-6 mt-8">
                 <div className="flex items-center justify-between mb-4">
@@ -574,51 +596,13 @@ function App() {
               <div className="glass-panel p-6 mt-8">
                 <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold">Video Translation</h2>
-                  <span className="text-[10px] bg-white/5 border border-white/5 px-2 py-0.5 rounded text-zinc-500 uppercase tracking-wider">Optional</span>
+                  <span className="text-[10px] bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded text-green-400 uppercase tracking-wider">Local</span>
                 </div>
-                <p className="text-xs text-zinc-500 mb-6 leading-relaxed">
-                  Translate your clips to different languages using <strong>ElevenLabs</strong> AI dubbing.
-                  Automatically translates speech while preserving the original voice characteristics.
+                <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
+                  Translate your clips to 30+ languages using local AI. Transcription, translation, and voice synthesis all run on your machine via Ollama and edge-tts. No API keys needed.
                 </p>
-                <div className="space-y-4">
-                  <label className="block text-sm text-zinc-400">ElevenLabs API Key</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="password"
-                      value={elevenLabsKey}
-                      onChange={(e) => setElevenLabsKey(e.target.value)}
-                      className="input-field"
-                      placeholder="sk_..."
-                    />
-                    <button
-                      onClick={() => {
-                        if (elevenLabsKey) {
-                          localStorage.setItem('elevenLabsKey_v1', encrypt(elevenLabsKey));
-                          alert('ElevenLabs API Key saved!');
-                        }
-                      }}
-                      className="btn-primary py-2 px-4 text-sm"
-                    >
-                      Save
-                    </button>
-                  </div>
-                  <p className="text-xs text-zinc-500 leading-relaxed">
-                    Get your API key from ElevenLabs to enable video translation.
-                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <a href="https://elevenlabs.io/sign-up" target="_blank" rel="noopener noreferrer" className="p-2 border border-white/5 rounded-lg hover:bg-white/5 transition-colors flex flex-col gap-1">
-                        <span className="text-zinc-400 font-medium">1. Sign Up</span>
-                        <span className="text-[10px] text-zinc-600">Create account</span>
-                      </a>
-                      <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank" rel="noopener noreferrer" className="p-2 border border-white/5 rounded-lg hover:bg-white/5 transition-colors flex flex-col gap-1">
-                        <span className="text-zinc-400 font-medium">2. API Key</span>
-                        <span className="text-[10px] text-zinc-600">Generate key</span>
-                      </a>
-                    </div>
-                    <br />
-                    <span className="text-zinc-600 italic">
-                      Keys are only stored in your browser. They are sent to the backend only to process your request, never stored server-side.
-                    </span>
-                  </p>
+                <div className="p-3 bg-green-500/5 border border-green-500/10 rounded-lg">
+                  <p className="text-xs text-green-400">Ready to use. Select any clip and click "Dub Voice" to translate.</p>
                 </div>
               </div>
 
@@ -677,7 +661,7 @@ function App() {
 
           {/* View: SaaS Shorts */}
           {activeTab === 'saasshorts' && (
-            <SaaShortsTab geminiApiKey={apiKey} elevenLabsKey={elevenLabsKey} falKey={falKey} uploadPostKey={uploadPostKey} uploadUserId={uploadUserId} />
+            <SaaShortsTab falKey={falKey} uploadPostKey={uploadPostKey} uploadUserId={uploadUserId} />
           )}
 
           {/* View: UGC Gallery */}
@@ -687,7 +671,7 @@ function App() {
 
           {/* View: Thumbnails */}
           {activeTab === 'thumbnails' && (
-            <ThumbnailStudio geminiApiKey={apiKey} uploadPostKey={uploadPostKey} uploadUserId={uploadUserId} />
+            <ThumbnailStudio uploadPostKey={uploadPostKey} uploadUserId={uploadUserId} />
           )}
 
           {/* View: Gallery */}
@@ -708,7 +692,7 @@ function App() {
                   </p>
                 </div>
 
-                <MediaInput onProcess={handleProcess} isProcessing={status === 'processing'} />
+                <MediaInput onProcess={handleProcess} onBatch={handleBatch} isProcessing={status === 'processing'} />
 
                 <div className="flex items-center justify-center gap-8 text-zinc-500 text-sm">
                   <span className="flex items-center gap-2"><Youtube size={16} /> YouTube</span>
@@ -803,8 +787,6 @@ function App() {
                           jobId={jobId}
                           uploadPostKey={uploadPostKey}
                           uploadUserId={uploadUserId}
-                          geminiApiKey={apiKey}
-                          elevenLabsKey={elevenLabsKey}
                           onPlay={(time) => handleClipPlay(time)}
                           onPause={handleClipPause}
                         />

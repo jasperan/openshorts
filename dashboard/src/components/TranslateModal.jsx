@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, Globe, Languages, AlertCircle } from 'lucide-react';
+import { X, Loader2, Globe, Languages } from 'lucide-react';
 import { getApiUrl } from '../config';
 
 const LANGUAGES = {
@@ -36,7 +36,7 @@ const LANGUAGES = {
     "en": "English",
 };
 
-export default function TranslateModal({ isOpen, onClose, onTranslate, isProcessing, videoUrl, hasApiKey }) {
+export default function TranslateModal({ isOpen, onClose, onTranslate, isProcessing, videoUrl }) {
     const [targetLanguage, setTargetLanguage] = useState('es');
 
     if (!isOpen) return null;
@@ -63,16 +63,9 @@ export default function TranslateModal({ isOpen, onClose, onTranslate, isProcess
                     </div>
                     <div>
                         <h3 className="text-lg font-bold text-white">Dub Voice</h3>
-                        <p className="text-xs text-zinc-500">AI voice translation by ElevenLabs</p>
+                        <p className="text-xs text-zinc-500">Local AI voice translation (no API key needed)</p>
                     </div>
                 </div>
-
-                {!hasApiKey && (
-                    <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 text-xs rounded-lg flex items-start gap-2">
-                        <AlertCircle size={14} className="mt-0.5 shrink-0" />
-                        <div>Configure ElevenLabs API Key in Settings first.</div>
-                    </div>
-                )}
 
                 {/* Preview */}
                 <div className="mb-6 rounded-xl overflow-hidden bg-black aspect-video relative">
@@ -108,7 +101,7 @@ export default function TranslateModal({ isOpen, onClose, onTranslate, isProcess
                 {/* Info */}
                 <div className="mb-6 p-3 bg-green-500/10 border border-green-500/20 rounded-lg">
                     <p className="text-xs text-green-400">
-                        The audio will be dubbed with AI-generated voice in the selected language, matching the original speaker's characteristics.
+                        Audio will be transcribed, translated, and re-dubbed locally using AI. No cloud APIs or keys needed.
                     </p>
                 </div>
 
@@ -136,7 +129,7 @@ export default function TranslateModal({ isOpen, onClose, onTranslate, isProcess
                     </button>
                     <button
                         onClick={handleSubmit}
-                        disabled={isProcessing || !hasApiKey}
+                        disabled={isProcessing}
                         className="flex-1 py-3 bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-400 hover:to-teal-500 text-white rounded-xl font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                     >
                         {isProcessing ? (

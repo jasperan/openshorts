@@ -40,3 +40,8 @@ output/
 skills/
 skills-lock.json
 
+CLAUDE.md
+
+# Serena / design docs
+.serena/
+docs/plans/
