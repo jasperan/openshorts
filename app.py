@@ -314,9 +314,6 @@ async def process_endpoint(
     file: Optional[UploadFile] = File(None),
     url: Optional[str] = Form(None)
 ):
-    api_key = request.headers.get("X-Gemini-Key")
-    # Gemini key optional - core pipeline uses local Ollama
-    
     # Handle JSON body manually for URL payload
     content_type = request.headers.get("content-type", "")
     if "application/json" in content_type:
@@ -333,9 +330,7 @@ async def process_endpoint(
     # Prepare Command
     cmd = ["python", "-u", "main.py"] # -u for unbuffered
     env = os.environ.copy()
-    if api_key:
-        env["GEMINI_API_KEY"] = api_key  # Override with key from request
-    
+
     if url:
         cmd.extend(["-u", url])
     else:
@@ -393,7 +388,6 @@ from thumbnail import analyze_video_for_titles, refine_titles, generate_thumbnai
 class EditRequest(BaseModel):
     job_id: str
     clip_index: int
-    api_key: Optional[str] = None
     input_filename: Optional[str] = None
 
 @app.post("/api/edit")
@@ -429,23 +423,22 @@ async def edit_clip(
         output_path = os.path.join(OUTPUT_DIR, req.job_id, edited_filename)
         
         # Run editing in a thread to avoid blocking main loop
-        # Since VideoEditor uses blocking calls (subprocess, API wait)
+        # Since VideoEditor uses blocking calls (subprocess)
         def run_edit():
-            editor = VideoEditor(api_key=final_api_key)
-            
+            editor = VideoEditor()
+
             # SAFE FILE RENAMING STRATEGY (Avoid UnicodeEncodeError in Docker)
-            # Create a safe ASCII filename in the same directory
             safe_filename = f"temp_input_{req.job_id}.mp4"
             safe_input_path = os.path.join(OUTPUT_DIR, req.job_id, safe_filename)
-            
+
             # Copy original file to safe path
-            # (Copy is safer than rename if something crashes, we keep original)
             shutil.copy(input_path, safe_input_path)
-            
+            keyframes_tmpdir = None
+
             try:
-                # 1. Upload (using safe path)
-                vid_file = editor.upload_video(safe_input_path)
-                
+                # 1. Extract keyframes (replaces Gemini upload)
+                keyframe_paths, keyframes_tmpdir = editor.extract_keyframes(safe_input_path)
+
                 # 2. Get duration
                 import cv2
                 cap = cv2.VideoCapture(safe_input_path)
@@ -455,7 +448,7 @@ async def edit_clip(
                 height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                 duration = frame_count / fps if fps else 0
                 cap.release()
-                
+
                 # Load transcript from metadata
                 transcript = None
                 try:
@@ -465,29 +458,26 @@ async def edit_clip(
                             data = json.load(f)
                             transcript = data.get('transcript')
                 except Exception as e:
-                    print(f"⚠️ Could not load transcript for editing context: {e}")
+                    print(f"Could not load transcript for editing context: {e}")
 
-                # 3. Get Plan (Filter String)
-                filter_data = editor.get_ffmpeg_filter(vid_file, duration, fps=fps, width=width, height=height, transcript=transcript)
-                
+                # 3. Get Plan (Filter String) via Ollama vision
+                filter_data = editor.get_ffmpeg_filter(keyframe_paths, duration, fps=fps, width=width, height=height, transcript=transcript)
+
                 # 4. Apply
-                # Use safe output name first
                 safe_output_path = os.path.join(OUTPUT_DIR, req.job_id, f"temp_output_{req.job_id}.mp4")
                 editor.apply_edits(safe_input_path, safe_output_path, filter_data)
-                
-                # Move result to final destination (rename works even if dest name has unicode if filesystem supports it, 
-                # but python might still struggle if locale is broken? No, os.rename usually handles it better than subprocess args)
-                # Actually, output_path is defined above: f"edited_{filename}"
-                # If filename has unicode, output_path has unicode.
-                # Let's hope shutil.move / os.rename works.
+
                 if os.path.exists(safe_output_path):
                     shutil.move(safe_output_path, output_path)
-                
+
                 return filter_data
             finally:
                 # Cleanup temp safe input
                 if os.path.exists(safe_input_path):
                     os.remove(safe_input_path)
+                # Cleanup keyframe temp dir
+                if keyframes_tmpdir and os.path.exists(keyframes_tmpdir):
+                    shutil.rmtree(keyframes_tmpdir, ignore_errors=True)
 
         # Run in thread pool
         loop = asyncio.get_event_loop()
