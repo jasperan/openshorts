@@ -1034,20 +1034,14 @@ if __name__ == '__main__':
         # 3. Transcribe
         transcript = transcribe_video(input_video)
 
-        # Remove silence if enabled
-        if not args.keep_silence:
-            silence_removed_path = os.path.join(output_dir, "silence_removed.mp4")
-            input_video = remove_silence(input_video, transcript, silence_removed_path,
-                                         min_silence_duration=args.silence_threshold)
-
-        # Get duration
+        # Get duration from ORIGINAL video
         cap = cv2.VideoCapture(input_video)
         fps = cap.get(cv2.CAP_PROP_FPS)
         frame_count = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
         duration = frame_count / fps
         cap.release()
 
-        # 4. Gemini Analysis
+        # 4. AI Analysis (uses original timestamps)
         clips_data = get_viral_clips(transcript, duration)
         
         if not clips_data or 'shorts' not in clips_data:
@@ -1082,40 +1076,46 @@ if __name__ == '__main__':
                 json.dump(clips_data, f, indent=2)
             print(f"   Saved metadata to {metadata_file}")
 
-            # 5. Process each clip
+            # 5. Process each clip (cut from ORIGINAL video, then optionally remove silence)
             for i, clip in enumerate(clips_data['shorts']):
                 start = clip['start']
                 end = clip['end']
                 print(f"\n🎬 Processing Clip {i+1}: {start}s - {end}s")
                 print(f"   Title: {clip.get('video_title_for_youtube_short', 'No Title')}")
-                
-                # Cut clip
+
                 clip_filename = f"{video_title}_clip_{i+1}.mp4"
+                clip_cut_path = os.path.join(output_dir, f"cut_{clip_filename}")
                 clip_temp_path = os.path.join(output_dir, f"temp_{clip_filename}")
                 clip_final_path = os.path.join(output_dir, clip_filename)
-                
-                # ffmpeg cut
-                # Using re-encoding for precision as requested by strict seconds
+
+                # Cut clip from original video (timestamps match original)
                 cut_command = [
-                    'ffmpeg', '-y', 
-                    '-ss', str(start), 
-                    '-to', str(end), 
+                    'ffmpeg', '-y',
+                    '-ss', str(start),
+                    '-to', str(end),
                     '-i', input_video,
                     '-c:v', 'libx264', '-crf', '18', '-preset', 'fast',
                     '-c:a', 'aac',
-                    clip_temp_path
+                    clip_cut_path
                 ]
                 subprocess.run(cut_command, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-                
-                # Process vertical
-                success = process_video_to_vertical(clip_temp_path, clip_final_path)
-                
+
+                if not os.path.exists(clip_cut_path) or os.path.getsize(clip_cut_path) == 0:
+                    print(f"   ⚠️ FFmpeg cut failed for clip {i+1}, skipping")
+                    continue
+
+                # Process vertical (clips are already the densest speech segments)
+                success = process_video_to_vertical(clip_cut_path, clip_final_path)
+
                 if success:
                     print(f"   ✅ Clip {i+1} ready: {clip_final_path}")
-                
-                # Clean up temp cut
-                if os.path.exists(clip_temp_path):
-                    os.remove(clip_temp_path)
+
+                # Clean up temp cut file
+                if os.path.exists(clip_cut_path):
+                    try:
+                        os.remove(clip_cut_path)
+                    except OSError:
+                        pass
 
     # Clean up original if requested
     if args.url and not args.keep_original and os.path.exists(input_video):
