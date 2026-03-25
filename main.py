@@ -816,6 +816,126 @@ def get_viral_clips(transcript_result, video_duration):
         print(f"❌ LLM Error: {e}")
         return None
 
+def remove_silence(video_path, transcript, output_path, min_silence_duration=0.3, padding=0.05):
+    """
+    Remove silent parts from a video based on word-level timestamps.
+
+    Args:
+        video_path: Input video path
+        transcript: Transcript dict with segments containing word-level timestamps
+        output_path: Output video path
+        min_silence_duration: Minimum gap (seconds) between words to consider as silence
+        padding: Extra time (seconds) to keep around speech boundaries
+
+    Returns:
+        Path to the silence-removed video, or original path if no significant silence found
+    """
+    # Collect all word timestamps
+    words = []
+    for segment in transcript.get("segments", []):
+        for word_info in segment.get("words", []):
+            words.append({"start": word_info["start"], "end": word_info["end"]})
+
+    if not words:
+        print("⚠️ No word timestamps found, skipping silence removal")
+        return video_path
+
+    # Sort by start time
+    words.sort(key=lambda w: w["start"])
+
+    # Build speech segments (merge words that are close together)
+    speech_segments = []
+    current_start = max(0, words[0]["start"] - padding)
+    current_end = words[0]["end"] + padding
+
+    for word in words[1:]:
+        gap = word["start"] - current_end
+        if gap > min_silence_duration:
+            # Found a significant silence gap
+            speech_segments.append((current_start, current_end))
+            current_start = max(0, word["start"] - padding)
+        current_end = word["end"] + padding
+
+    # Add the last segment
+    speech_segments.append((current_start, current_end))
+
+    # If we didn't find any significant silences, skip
+    total_speech = sum(end - start for start, end in speech_segments)
+
+    # Get video duration
+    probe_cmd = [
+        "ffprobe", "-v", "error", "-show_entries", "format=duration",
+        "-of", "csv=p=0", video_path,
+    ]
+    try:
+        video_duration = float(subprocess.check_output(probe_cmd).decode().strip())
+    except Exception:
+        print("⚠️ Could not probe video duration, skipping silence removal")
+        return video_path
+
+    silence_ratio = 1 - (total_speech / video_duration) if video_duration > 0 else 0
+
+    if silence_ratio < 0.05:
+        print(f"✅ Video has minimal silence ({silence_ratio:.1%}), skipping removal")
+        return video_path
+
+    print(f"✂️ Removing silence: {silence_ratio:.1%} of video is silent ({len(speech_segments)} speech segments)")
+
+    # Build FFmpeg concat filter
+    # Create a file listing segments for FFmpeg
+    segments_file = output_path + ".segments.txt"
+    temp_segments = []
+
+    for i, (start, end) in enumerate(speech_segments):
+        seg_path = output_path + f".seg{i}.mp4"
+        cmd = [
+            "ffmpeg", "-y",
+            "-ss", str(start), "-to", str(end),
+            "-i", video_path,
+            "-c", "copy", "-avoid_negative_ts", "make_zero",
+            seg_path,
+        ]
+        subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        if os.path.exists(seg_path) and os.path.getsize(seg_path) > 0:
+            temp_segments.append(seg_path)
+
+    if not temp_segments:
+        print("⚠️ No segments extracted, keeping original")
+        return video_path
+
+    # Write concat file
+    with open(segments_file, "w") as f:
+        for seg in temp_segments:
+            f.write(f"file '{seg}'\n")
+
+    # Concatenate segments
+    concat_cmd = [
+        "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+        "-i", segments_file,
+        "-c", "copy",
+        output_path,
+    ]
+    result = subprocess.run(concat_cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
+
+    # Cleanup temp files
+    for seg in temp_segments:
+        try:
+            os.remove(seg)
+        except OSError:
+            pass
+    try:
+        os.remove(segments_file)
+    except OSError:
+        pass
+
+    if result.returncode != 0 or not os.path.exists(output_path):
+        print(f"⚠️ Silence removal failed, keeping original")
+        return video_path
+
+    print(f"✅ Silence removed: {video_duration:.1f}s → {total_speech:.1f}s")
+    return output_path
+
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="AutoCrop-Vertical with Viral Clip Detection.")
     
@@ -826,7 +946,10 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output', type=str, help="Output directory or file (if processing whole video).")
     parser.add_argument('--keep-original', action='store_true', help="Keep the downloaded YouTube video.")
     parser.add_argument('--skip-analysis', action='store_true', help="Skip AI analysis and convert the whole video.")
-    
+    parser.add_argument('--remove-silence', action='store_true', default=True, help='Remove silent parts from video')
+    parser.add_argument('--keep-silence', action='store_true', default=False, help='Keep silent parts (disable silence removal)')
+    parser.add_argument('--silence-threshold', type=float, default=0.3, help='Minimum silence duration to remove (seconds)')
+
     args = parser.parse_args()
 
     script_start_time = time.time()
@@ -881,7 +1004,13 @@ if __name__ == '__main__':
     else:
         # 3. Transcribe
         transcript = transcribe_video(input_video)
-        
+
+        # Remove silence if enabled
+        if not args.keep_silence:
+            silence_removed_path = os.path.join(output_dir, "silence_removed.mp4")
+            input_video = remove_silence(input_video, transcript, silence_removed_path,
+                                         min_silence_duration=args.silence_threshold)
+
         # Get duration
         cap = cv2.VideoCapture(input_video)
         fps = cap.get(cv2.CAP_PROP_FPS)
