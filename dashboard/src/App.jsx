@@ -536,7 +536,7 @@ function App() {
                 <div className="grid grid-cols-2 gap-3">
                   <div className="p-3 bg-white/5 rounded-lg border border-white/5">
                     <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Text Model</span>
-                    <p className="text-sm text-white font-mono mt-1">qwen3.5:9b</p>
+                    <p className="text-sm text-white font-mono mt-1">qwen3.5:4b</p>
                   </div>
                   <div className="p-3 bg-white/5 rounded-lg border border-white/5">
                     <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Vision Model</span>
