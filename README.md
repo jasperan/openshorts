@@ -6,6 +6,27 @@
 
 **Free & open source AI video platform** with 3 tools in one: **Clip Generator**, **AI Shorts (UGC videos with AI actors)**, and **YouTube Studio**. Self-hosted with Docker. No watermarks, no limits.
 
+<div align="center">
+
+**[View Interactive Presentation](docs/slides/presentation.html)** | Animated overview of the project
+
+</div>
+
+<table>
+<tr>
+<td><img src="docs/slides/slide-01.png" alt="Title" width="400"/></td>
+<td><img src="docs/slides/slide-02.png" alt="Overview" width="400"/></td>
+</tr>
+<tr>
+<td><img src="docs/slides/slide-03.png" alt="Architecture" width="400"/></td>
+<td><img src="docs/slides/slide-04.png" alt="Features" width="400"/></td>
+</tr>
+<tr>
+<td><img src="docs/slides/slide-05.png" alt="Tech Stack" width="400"/></td>
+<td><img src="docs/slides/slide-06.png" alt="Getting Started" width="400"/></td>
+</tr>
+</table>
+
 ![OpenShorts Demo](https://github.com/kamilstanuch/Autocrop-vertical/blob/main/churchil_queen_vertical_short.gif?raw=true)
 
 ### Video Tutorial: How it works

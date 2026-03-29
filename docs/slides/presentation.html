@@ -1,0 +1,1536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OpenShorts - AI Video Platform</title>
+
+    <!-- Google Fonts: Outfit -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        /* ===========================================
+           CSS CUSTOM PROPERTIES (SPLIT PASTEL THEME)
+           =========================================== */
+        :root {
+            /* Split Pastel Colors */
+            --bg-peach: #f5e6dc;
+            --bg-lavender: #e4dff0;
+            --text-dark: #1a1a1a;
+            --text-secondary: #4a4a4a;
+            --badge-mint: #c8f0d8;
+            --badge-yellow: #f0f0c8;
+            --badge-pink: #f0d4e0;
+            --badge-blue: #c8ddf0;
+            --badge-coral: #f0c8c8;
+            --badge-purple: #d8c8f0;
+
+            /* Typography */
+            --font-display: 'Outfit', sans-serif;
+            --font-body: 'Outfit', sans-serif;
+            --title-size: clamp(2rem, 6vw, 5rem);
+            --h2-size: clamp(1.25rem, 3.5vw, 2.5rem);
+            --h3-size: clamp(1rem, 2.5vw, 1.75rem);
+            --subtitle-size: clamp(0.875rem, 2vw, 1.25rem);
+            --body-size: clamp(0.75rem, 1.5vw, 1.125rem);
+            --small-size: clamp(0.65rem, 1vw, 0.875rem);
+            --code-size: clamp(0.65rem, 1.1vw, 0.9rem);
+
+            /* Spacing */
+            --slide-padding: clamp(1.5rem, 4vw, 4rem);
+            --content-gap: clamp(0.5rem, 2vw, 2rem);
+            --element-gap: clamp(0.25rem, 1vw, 1rem);
+
+            /* Animation */
+            --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+            --duration-normal: 0.6s;
+        }
+
+        /* ===========================================
+           BASE RESET
+           =========================================== */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--text-dark);
+            background: var(--bg-peach);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===========================================
+           VIEWPORT FITTING: MANDATORY BASE STYLES
+           Include this ENTIRE file in every presentation.
+           These styles ensure slides fit exactly in the viewport.
+           =========================================== */
+
+        /* 1. Lock html/body to viewport */
+        html, body {
+            height: 100%;
+            overflow-x: hidden;
+        }
+
+        html {
+            scroll-snap-type: y mandatory;
+            scroll-behavior: smooth;
+        }
+
+        /* 2. Each slide = exact viewport height */
+        .slide {
+            width: 100vw;
+            height: 100vh;
+            height: 100dvh;
+            overflow: hidden;
+            scroll-snap-align: start;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        /* 3. Content container with flex for centering */
+        .slide-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            max-height: 100%;
+            overflow: hidden;
+            padding: var(--slide-padding);
+        }
+
+        /* 4. ALL typography uses clamp() for responsive scaling */
+        /* (defined in :root above) */
+
+        /* 5. Cards/containers use viewport-relative max sizes */
+        .card, .container, .content-box {
+            max-width: min(90vw, 1000px);
+            max-height: min(80vh, 700px);
+        }
+
+        /* 6. Lists auto-scale with viewport */
+        .feature-list, .bullet-list {
+            gap: clamp(0.4rem, 1vh, 1rem);
+        }
+
+        .feature-list li, .bullet-list li {
+            font-size: var(--body-size);
+            line-height: 1.4;
+        }
+
+        /* 7. Grids adapt to available space */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
+            gap: clamp(0.5rem, 1.5vw, 1rem);
+        }
+
+        /* 8. Images constrained to viewport */
+        img, .image-container {
+            max-width: 100%;
+            max-height: min(50vh, 400px);
+            object-fit: contain;
+        }
+
+        /* Short viewports (< 700px height) */
+        @media (max-height: 700px) {
+            :root {
+                --slide-padding: clamp(0.75rem, 3vw, 2rem);
+                --content-gap: clamp(0.4rem, 1.5vw, 1rem);
+                --title-size: clamp(1.25rem, 4.5vw, 2.5rem);
+                --h2-size: clamp(1rem, 3vw, 1.75rem);
+            }
+        }
+
+        /* Very short viewports (< 600px height) */
+        @media (max-height: 600px) {
+            :root {
+                --slide-padding: clamp(0.5rem, 2.5vw, 1.5rem);
+                --content-gap: clamp(0.3rem, 1vw, 0.75rem);
+                --title-size: clamp(1.1rem, 4vw, 2rem);
+                --body-size: clamp(0.7rem, 1.2vw, 0.95rem);
+            }
+
+            .nav-dots, .keyboard-hint, .decorative {
+                display: none;
+            }
+        }
+
+        /* Extremely short (landscape phones, < 500px height) */
+        @media (max-height: 500px) {
+            :root {
+                --slide-padding: clamp(0.4rem, 2vw, 1rem);
+                --title-size: clamp(1rem, 3.5vw, 1.5rem);
+                --h2-size: clamp(0.9rem, 2.5vw, 1.25rem);
+                --body-size: clamp(0.65rem, 1vw, 0.85rem);
+            }
+        }
+
+        /* Narrow viewports (< 600px width) */
+        @media (max-width: 600px) {
+            :root {
+                --title-size: clamp(1.25rem, 7vw, 2.5rem);
+            }
+
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Reduced motion */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after {
+                animation-duration: 0.01ms !important;
+                transition-duration: 0.2s !important;
+            }
+
+            html {
+                scroll-behavior: auto;
+            }
+        }
+
+        /* ===========================================
+           SPLIT PASTEL LAYOUT
+           Two-color vertical split backgrounds
+           =========================================== */
+        .slide-split {
+            background: linear-gradient(to right, var(--bg-peach) 50%, var(--bg-lavender) 50%);
+        }
+
+        .slide-peach {
+            background: var(--bg-peach);
+        }
+
+        .slide-lavender {
+            background: var(--bg-lavender);
+        }
+
+        .slide-mixed {
+            background: linear-gradient(135deg, var(--bg-peach) 40%, var(--bg-lavender) 100%);
+        }
+
+        /* Grid pattern overlay */
+        .grid-overlay::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50%;
+            height: 100%;
+            background-image:
+                linear-gradient(rgba(0,0,0,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0,0,0,0.04) 1px, transparent 1px);
+            background-size: 40px 40px;
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .slide-content {
+            position: relative;
+            z-index: 1;
+        }
+
+        /* ===========================================
+           TYPOGRAPHY
+           =========================================== */
+        h1 {
+            font-family: var(--font-display);
+            font-size: var(--title-size);
+            font-weight: 800;
+            line-height: 1.05;
+            letter-spacing: -0.02em;
+            color: var(--text-dark);
+        }
+
+        h2 {
+            font-family: var(--font-display);
+            font-size: var(--h2-size);
+            font-weight: 700;
+            line-height: 1.15;
+            letter-spacing: -0.01em;
+            color: var(--text-dark);
+            margin-bottom: var(--content-gap);
+        }
+
+        h3 {
+            font-family: var(--font-display);
+            font-size: var(--h3-size);
+            font-weight: 700;
+            line-height: 1.2;
+            color: var(--text-dark);
+        }
+
+        p, li {
+            font-size: var(--body-size);
+            line-height: 1.6;
+            color: var(--text-secondary);
+        }
+
+        .subtitle {
+            font-size: var(--subtitle-size);
+            font-weight: 500;
+            color: var(--text-secondary);
+        }
+
+        .slide-number {
+            font-family: var(--font-display);
+            font-size: var(--small-size);
+            font-weight: 700;
+            color: var(--text-dark);
+            opacity: 0.3;
+            position: absolute;
+            top: var(--slide-padding);
+            left: var(--slide-padding);
+        }
+
+        /* ===========================================
+           BADGE PILLS
+           Playful colored tags
+           =========================================== */
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: clamp(0.25rem, 0.5vw, 0.5rem);
+            padding: clamp(0.3rem, 0.6vw, 0.5rem) clamp(0.6rem, 1.2vw, 1rem);
+            border-radius: 100px;
+            font-family: var(--font-display);
+            font-size: var(--small-size);
+            font-weight: 600;
+            color: var(--text-dark);
+            white-space: nowrap;
+        }
+
+        .badge-mint { background: var(--badge-mint); }
+        .badge-yellow { background: var(--badge-yellow); }
+        .badge-pink { background: var(--badge-pink); }
+        .badge-blue { background: var(--badge-blue); }
+        .badge-coral { background: var(--badge-coral); }
+        .badge-purple { background: var(--badge-purple); }
+
+        .badge-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: clamp(0.3rem, 0.8vw, 0.75rem);
+            margin-top: var(--element-gap);
+        }
+
+        /* ===========================================
+           FEATURE CARDS
+           =========================================== */
+        .feature-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+            gap: clamp(0.5rem, 1.5vw, 1.25rem);
+            margin-top: var(--content-gap);
+        }
+
+        .feature-card {
+            background: rgba(255,255,255,0.6);
+            backdrop-filter: blur(10px);
+            border-radius: clamp(12px, 1.5vw, 20px);
+            padding: clamp(0.75rem, 1.5vw, 1.5rem);
+            border: 1px solid rgba(0,0,0,0.06);
+            transition: transform 0.3s var(--ease-out-expo);
+        }
+
+        .feature-card:hover {
+            transform: translateY(-2px);
+        }
+
+        .feature-card .icon {
+            font-size: clamp(1.25rem, 2.5vw, 2rem);
+            margin-bottom: clamp(0.25rem, 0.5vw, 0.5rem);
+        }
+
+        .feature-card h3 {
+            font-size: clamp(0.8rem, 1.4vw, 1.1rem);
+            font-weight: 700;
+            margin-bottom: clamp(0.15rem, 0.3vw, 0.3rem);
+        }
+
+        .feature-card p {
+            font-size: var(--small-size);
+            line-height: 1.4;
+        }
+
+        /* ===========================================
+           PIPELINE / FLOW STEPS
+           =========================================== */
+        .pipeline {
+            display: flex;
+            flex-wrap: wrap;
+            gap: clamp(0.4rem, 1vw, 0.75rem);
+            align-items: center;
+            margin-top: var(--content-gap);
+        }
+
+        .pipeline-step {
+            background: rgba(255,255,255,0.7);
+            border-radius: 100px;
+            padding: clamp(0.3rem, 0.6vw, 0.5rem) clamp(0.6rem, 1.2vw, 1rem);
+            font-size: var(--small-size);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: clamp(0.2rem, 0.4vw, 0.4rem);
+            border: 1px solid rgba(0,0,0,0.06);
+            white-space: nowrap;
+        }
+
+        .pipeline-step .step-num {
+            background: var(--text-dark);
+            color: white;
+            width: clamp(16px, 1.5vw, 22px);
+            height: clamp(16px, 1.5vw, 22px);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: clamp(0.5rem, 0.8vw, 0.7rem);
+            font-weight: 700;
+            flex-shrink: 0;
+        }
+
+        .pipeline-arrow {
+            font-size: var(--small-size);
+            color: var(--text-dark);
+            opacity: 0.3;
+        }
+
+        /* ===========================================
+           SPLIT CONTENT LAYOUT
+           =========================================== */
+        .split-layout {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: clamp(1rem, 3vw, 3rem);
+            align-items: center;
+        }
+
+        @media (max-width: 700px) {
+            .split-layout {
+                grid-template-columns: 1fr;
+                gap: clamp(0.5rem, 2vw, 1rem);
+            }
+        }
+
+        /* ===========================================
+           CODE BLOCKS
+           =========================================== */
+        .code-block {
+            background: #1a1a1a;
+            color: #e8e4df;
+            border-radius: clamp(8px, 1vw, 16px);
+            padding: clamp(0.75rem, 1.5vw, 1.5rem);
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            font-size: var(--code-size);
+            line-height: 1.6;
+            overflow: hidden;
+            margin-top: var(--element-gap);
+        }
+
+        .code-block .comment { color: #6b7280; }
+        .code-block .keyword { color: #c084fc; }
+        .code-block .string { color: #86efac; }
+        .code-block .func { color: #67e8f9; }
+
+        /* ===========================================
+           CTA BUTTONS
+           Rounded, playful
+           =========================================== */
+        .cta-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: clamp(0.3rem, 0.6vw, 0.5rem);
+            padding: clamp(0.5rem, 1vw, 0.75rem) clamp(1rem, 2vw, 1.5rem);
+            background: var(--text-dark);
+            color: white;
+            border-radius: 100px;
+            font-family: var(--font-display);
+            font-size: var(--small-size);
+            font-weight: 600;
+            text-decoration: none;
+            border: none;
+            cursor: pointer;
+            transition: transform 0.2s var(--ease-out-expo), box-shadow 0.2s;
+        }
+
+        .cta-btn:hover {
+            transform: scale(1.03);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+        }
+
+        .cta-btn-outline {
+            background: transparent;
+            color: var(--text-dark);
+            border: 2px solid var(--text-dark);
+        }
+
+        /* ===========================================
+           TABLE STYLING
+           =========================================== */
+        .styled-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: var(--element-gap);
+            font-size: var(--small-size);
+        }
+
+        .styled-table th {
+            text-align: left;
+            padding: clamp(0.3rem, 0.6vw, 0.5rem) clamp(0.5rem, 1vw, 0.75rem);
+            font-weight: 700;
+            border-bottom: 2px solid rgba(0,0,0,0.1);
+        }
+
+        .styled-table td {
+            padding: clamp(0.3rem, 0.6vw, 0.5rem) clamp(0.5rem, 1vw, 0.75rem);
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+
+        /* ===========================================
+           STAT BLOCKS
+           =========================================== */
+        .stat-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: clamp(0.5rem, 2vw, 2rem);
+            margin-top: var(--content-gap);
+        }
+
+        .stat-block {
+            text-align: center;
+        }
+
+        .stat-block .stat-value {
+            font-family: var(--font-display);
+            font-size: clamp(1.5rem, 4vw, 3.5rem);
+            font-weight: 800;
+            color: var(--text-dark);
+            line-height: 1;
+        }
+
+        .stat-block .stat-label {
+            font-size: var(--small-size);
+            color: var(--text-secondary);
+            margin-top: clamp(0.15rem, 0.3vw, 0.3rem);
+        }
+
+        /* ===========================================
+           ANIMATIONS
+           Trigger via .visible class
+           =========================================== */
+        .reveal {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity var(--duration-normal) var(--ease-out-expo),
+                        transform var(--duration-normal) var(--ease-out-expo);
+        }
+
+        .reveal-left {
+            opacity: 0;
+            transform: translateX(-50px);
+            transition: opacity var(--duration-normal) var(--ease-out-expo),
+                        transform var(--duration-normal) var(--ease-out-expo);
+        }
+
+        .reveal-scale {
+            opacity: 0;
+            transform: scale(0.9);
+            transition: opacity var(--duration-normal) var(--ease-out-expo),
+                        transform var(--duration-normal) var(--ease-out-expo);
+        }
+
+        .slide.visible .reveal,
+        .slide.visible .reveal-left,
+        .slide.visible .reveal-scale {
+            opacity: 1;
+            transform: translateY(0) translateX(0) scale(1);
+        }
+
+        /* Stagger children */
+        .reveal:nth-child(1) { transition-delay: 0.1s; }
+        .reveal:nth-child(2) { transition-delay: 0.2s; }
+        .reveal:nth-child(3) { transition-delay: 0.3s; }
+        .reveal:nth-child(4) { transition-delay: 0.4s; }
+        .reveal:nth-child(5) { transition-delay: 0.5s; }
+        .reveal:nth-child(6) { transition-delay: 0.6s; }
+
+        .reveal-left:nth-child(1) { transition-delay: 0.1s; }
+        .reveal-left:nth-child(2) { transition-delay: 0.2s; }
+        .reveal-left:nth-child(3) { transition-delay: 0.3s; }
+
+        .reveal-scale:nth-child(1) { transition-delay: 0.1s; }
+        .reveal-scale:nth-child(2) { transition-delay: 0.2s; }
+        .reveal-scale:nth-child(3) { transition-delay: 0.3s; }
+
+        /* Floating bob animation for decorative elements */
+        @keyframes float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+
+        .float { animation: float 3s ease-in-out infinite; }
+        .float-delay { animation: float 3s ease-in-out 1s infinite; }
+
+        /* ===========================================
+           PROGRESS BAR
+           =========================================== */
+        .progress-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 3px;
+            background: var(--text-dark);
+            z-index: 1000;
+            transition: width 0.3s var(--ease-out-expo);
+            width: 0%;
+        }
+
+        /* ===========================================
+           NAVIGATION DOTS
+           =========================================== */
+        .nav-dots {
+            position: fixed;
+            right: clamp(12px, 1.5vw, 24px);
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            flex-direction: column;
+            gap: clamp(4px, 0.5vw, 8px);
+            z-index: 1000;
+        }
+
+        .nav-dot {
+            width: clamp(6px, 0.6vw, 10px);
+            height: clamp(6px, 0.6vw, 10px);
+            border-radius: 50%;
+            background: var(--text-dark);
+            opacity: 0.2;
+            cursor: pointer;
+            transition: opacity 0.3s, transform 0.3s var(--ease-out-expo);
+            border: none;
+            padding: 0;
+        }
+
+        .nav-dot.active {
+            opacity: 0.8;
+            transform: scale(1.4);
+        }
+
+        .nav-dot:hover {
+            opacity: 0.5;
+        }
+
+        /* ===========================================
+           SLIDE COUNTER
+           =========================================== */
+        .slide-counter {
+            position: fixed;
+            top: clamp(12px, 1.5vw, 24px);
+            right: clamp(12px, 1.5vw, 24px);
+            font-family: var(--font-display);
+            font-size: var(--small-size);
+            font-weight: 700;
+            color: var(--text-dark);
+            opacity: 0.4;
+            z-index: 1000;
+        }
+
+        /* ===========================================
+           DECORATIVE ELEMENTS
+           =========================================== */
+        .deco-circle {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.15;
+            pointer-events: none;
+        }
+
+        .deco-circle-peach {
+            background: var(--bg-peach);
+        }
+
+        .deco-circle-lavender {
+            background: var(--bg-lavender);
+        }
+
+        .deco-circle-mint {
+            background: var(--badge-mint);
+        }
+
+        /* Bullet list styling */
+        .bullet-list {
+            list-style: none;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            gap: clamp(0.3rem, 0.8vh, 0.75rem);
+        }
+
+        .bullet-list li {
+            display: flex;
+            align-items: flex-start;
+            gap: clamp(0.4rem, 0.8vw, 0.75rem);
+            font-size: var(--body-size);
+            line-height: 1.5;
+        }
+
+        .bullet-list li::before {
+            content: '';
+            width: clamp(6px, 0.6vw, 8px);
+            height: clamp(6px, 0.6vw, 8px);
+            border-radius: 50%;
+            background: var(--text-dark);
+            flex-shrink: 0;
+            margin-top: clamp(6px, 0.6vw, 8px);
+        }
+
+        /* ===========================================
+           TITLE SLIDE SPECIFIC
+           =========================================== */
+        .title-slide .slide-content {
+            align-items: center;
+            text-align: center;
+        }
+
+        .title-slide h1 {
+            max-width: min(90vw, 800px);
+        }
+
+        .emoji-hero {
+            font-size: clamp(3rem, 8vw, 6rem);
+            margin-bottom: var(--content-gap);
+        }
+    </style>
+</head>
+<body>
+    <!-- Progress Bar -->
+    <div class="progress-bar" id="progressBar"></div>
+
+    <!-- Navigation Dots -->
+    <nav class="nav-dots" id="navDots" aria-label="Slide navigation"></nav>
+
+    <!-- Slide Counter -->
+    <div class="slide-counter" id="slideCounter">1 / 23</div>
+
+    <!-- ===========================================
+         SLIDE 1: TITLE
+         =========================================== -->
+    <section class="slide slide-split grid-overlay title-slide" aria-label="Title">
+        <div class="slide-content">
+            <div class="emoji-hero reveal">&#127916;</div>
+            <h1 class="reveal">OpenShorts</h1>
+            <p class="subtitle reveal" style="margin-top: var(--element-gap);">Free, open source AI video platform. 3 tools, one Docker container, zero watermarks.</p>
+            <div class="badge-row reveal" style="margin-top: var(--content-gap); justify-content: center;">
+                <span class="badge badge-mint">Clip Generator</span>
+                <span class="badge badge-pink">AI Shorts</span>
+                <span class="badge badge-yellow">YouTube Studio</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 2: THE PROBLEM
+         =========================================== -->
+    <section class="slide slide-peach" aria-label="The Problem">
+        <span class="slide-number">02</span>
+        <div class="slide-content">
+            <h2 class="reveal">The short-form video problem</h2>
+            <ul class="bullet-list" style="margin-top: var(--content-gap); max-width: min(90vw, 700px);">
+                <li class="reveal">Editing long videos into vertical clips takes hours of manual work</li>
+                <li class="reveal">UGC marketing videos cost $200-500 per influencer per video</li>
+                <li class="reveal">YouTube metadata (thumbnails, titles, descriptions) requires separate tools</li>
+                <li class="reveal">Existing platforms charge per video, add watermarks, or lock features behind paywalls</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 3: THE SOLUTION
+         =========================================== -->
+    <section class="slide slide-lavender" aria-label="The Solution">
+        <span class="slide-number">03</span>
+        <div class="slide-content">
+            <h2 class="reveal">One platform, three tools</h2>
+            <p class="reveal" style="max-width: min(90vw, 650px);">OpenShorts handles the full pipeline: from long video to viral short, from product URL to UGC ad, from raw upload to polished YouTube listing.</p>
+            <div class="stat-row reveal" style="justify-content: center;">
+                <div class="stat-block">
+                    <div class="stat-value">$0</div>
+                    <div class="stat-label">Platform cost</div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-value">~$0.65</div>
+                    <div class="stat-label">Per AI short</div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-value">0</div>
+                    <div class="stat-label">Watermarks</div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-value">MIT</div>
+                    <div class="stat-label">License</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 4: TOOL 1 - CLIP GENERATOR OVERVIEW
+         =========================================== -->
+    <section class="slide slide-split grid-overlay" aria-label="Clip Generator">
+        <span class="slide-number">04</span>
+        <div class="slide-content">
+            <div class="badge badge-mint reveal" style="margin-bottom: var(--element-gap);">Tool 1</div>
+            <h2 class="reveal">Clip Generator</h2>
+            <p class="reveal" style="max-width: min(90vw, 600px);">Paste a YouTube URL or upload a video. Gemini 2.0 Flash analyzes the transcript and scene boundaries, then extracts 3-15 viral-ready 9:16 clips automatically.</p>
+            <div class="badge-row reveal">
+                <span class="badge badge-yellow">YouTube URLs</span>
+                <span class="badge badge-pink">Local uploads</span>
+                <span class="badge badge-blue">9:16 output</span>
+                <span class="badge badge-mint">Auto subtitles</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 5: CLIP GENERATOR FEATURES
+         =========================================== -->
+    <section class="slide slide-peach" aria-label="Clip Generator Features">
+        <span class="slide-number">05</span>
+        <div class="slide-content">
+            <h2 class="reveal">Clip Generator features</h2>
+            <div class="feature-grid">
+                <div class="feature-card reveal">
+                    <div class="icon">&#129504;</div>
+                    <h3>Viral moment detection</h3>
+                    <p>Gemini 2.0 Flash pinpoints 3-15 high-engagement segments (15-60s each)</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#127909;</div>
+                    <h3>Smart 9:16 cropping</h3>
+                    <p>TRACK mode (face tracking) or GENERAL mode (blurred background)</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#128172;</div>
+                    <h3>Auto subtitles</h3>
+                    <p>faster-whisper with word-level timestamps, styled and burned in</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#127908;</div>
+                    <h3>AI voice dubbing</h3>
+                    <p>ElevenLabs integration for 30+ languages with voice cloning</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#127912;</div>
+                    <h3>Hook text overlays</h3>
+                    <p>AI-generated attention-grabbing text rendered on clips</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#10024;</div>
+                    <h3>AI video effects</h3>
+                    <p>Gemini generates custom FFmpeg filters for pro-level effects</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 6: CLIP GENERATOR PIPELINE
+         =========================================== -->
+    <section class="slide slide-lavender" aria-label="Clip Pipeline">
+        <span class="slide-number">06</span>
+        <div class="slide-content">
+            <h2 class="reveal">Clip generation pipeline</h2>
+            <div class="pipeline reveal">
+                <div class="pipeline-step"><span class="step-num">1</span> Ingest</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">2</span> Transcribe</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">3</span> Detect scenes</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">4</span> AI analyze</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">5</span> Extract clips</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">6</span> Reframe 9:16</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">7</span> Effects</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">8</span> Publish</div>
+            </div>
+            <p class="reveal" style="margin-top: var(--content-gap); max-width: min(90vw, 600px);">YouTube download via yt-dlp, transcription with faster-whisper, scene boundaries from PySceneDetect, clip analysis from Gemini, precise cutting with FFmpeg.</p>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 7: TOOL 2 - AI SHORTS OVERVIEW
+         =========================================== -->
+    <section class="slide slide-split grid-overlay" aria-label="AI Shorts">
+        <span class="slide-number">07</span>
+        <div class="slide-content">
+            <div class="badge badge-pink reveal" style="margin-bottom: var(--element-gap);">Tool 2</div>
+            <h2 class="reveal">AI Shorts (UGC Creator)</h2>
+            <p class="reveal" style="max-width: min(90vw, 600px);">Generate marketing videos with AI actors for any product or business. No camera, no studio, no influencer budget. Describe your product or paste a URL.</p>
+            <div class="stat-row reveal">
+                <div class="stat-block">
+                    <div class="stat-value">~$0.65</div>
+                    <div class="stat-label">Low cost mode</div>
+                </div>
+                <div class="stat-block">
+                    <div class="stat-value">~$2</div>
+                    <div class="stat-label">Premium mode</div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 8: AI SHORTS PIPELINE
+         =========================================== -->
+    <section class="slide slide-mixed" aria-label="AI Shorts Pipeline">
+        <span class="slide-number">08</span>
+        <div class="slide-content">
+            <h2 class="reveal">AI Shorts pipeline</h2>
+            <div class="pipeline reveal">
+                <div class="pipeline-step"><span class="step-num">1</span> Analyze</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">2</span> Script</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">3</span> Actor</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">4</span> Voice</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">5</span> Video</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">6</span> B-roll</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">7</span> Composite</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">8</span> Gallery</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">9</span> Publish</div>
+            </div>
+            <p class="reveal" style="margin-top: var(--content-gap); max-width: min(90vw, 650px);">Website scraping + Gemini research, viral script generation, Flux 2 Pro actor portraits, ElevenLabs TTS, Hailuo 2.3 + VEED lipsync, FFmpeg final assembly.</p>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 9: AI SHORTS FEATURES
+         =========================================== -->
+    <section class="slide slide-peach" aria-label="AI Shorts Features">
+        <span class="slide-number">09</span>
+        <div class="slide-content">
+            <h2 class="reveal">What the AI Shorts pipeline produces</h2>
+            <div class="feature-grid">
+                <div class="feature-card reveal">
+                    <div class="icon">&#129489;</div>
+                    <h3>AI-generated actors</h3>
+                    <p>Flux 2 Pro portraits with lip-sync, or pick from a shared gallery</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#128221;</div>
+                    <h3>Viral scripts</h3>
+                    <p>Hook, problem, solution, CTA format written by Gemini</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#127916;</div>
+                    <h3>B-roll visuals</h3>
+                    <p>AI-generated images with Ken Burns pan-and-zoom effect</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#128266;</div>
+                    <h3>TTS voiceover</h3>
+                    <p>ElevenLabs voices in English/Spanish, male or female</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#128196;</div>
+                    <h3>TikTok-style subtitles</h3>
+                    <p>ASS format with word-level highlights burned into the video</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#128640;</div>
+                    <h3>Direct publishing</h3>
+                    <p>Post to TikTok, Instagram Reels, and YouTube Shorts in one click</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 10: TOOL 3 - YOUTUBE STUDIO
+         =========================================== -->
+    <section class="slide slide-lavender" aria-label="YouTube Studio">
+        <span class="slide-number">10</span>
+        <div class="slide-content">
+            <div class="badge badge-yellow reveal" style="margin-bottom: var(--element-gap);">Tool 3</div>
+            <h2 class="reveal">YouTube Studio</h2>
+            <p class="reveal" style="max-width: min(90vw, 600px);">Complete AI-powered YouTube toolkit: generate thumbnails, brainstorm titles, auto-write descriptions with chapter timestamps, then publish directly.</p>
+            <div class="feature-grid" style="max-width: min(90vw, 800px);">
+                <div class="feature-card reveal">
+                    <div class="icon">&#128247;</div>
+                    <h3>AI thumbnails</h3>
+                    <p>Generate with custom face overlay + background</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#128172;</div>
+                    <h3>Title brainstorm</h3>
+                    <p>10 viral options with interactive refinement chat</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#128196;</div>
+                    <h3>Auto descriptions</h3>
+                    <p>Chapters with timestamps from Whisper transcript</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#128228;</div>
+                    <h3>One-click publish</h3>
+                    <p>Direct upload to YouTube via Upload-Post</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 11: UGC GALLERY
+         =========================================== -->
+    <section class="slide slide-split grid-overlay" aria-label="UGC Gallery">
+        <span class="slide-number">11</span>
+        <div class="slide-content">
+            <h2 class="reveal">Public UGC Gallery</h2>
+            <p class="reveal" style="max-width: min(90vw, 600px);">Every generated video and avatar gets saved to a searchable, SEO-optimized gallery with hover-to-play previews.</p>
+            <ul class="bullet-list" style="margin-top: var(--content-gap); max-width: min(90vw, 600px);">
+                <li class="reveal">Gallery page with hover-to-play at <code>/gallery</code></li>
+                <li class="reveal">Individual SEO video pages with og:video meta tags</li>
+                <li class="reveal">JSON-LD structured data for search engines</li>
+                <li class="reveal">Shared avatar gallery with prompt history</li>
+            </ul>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 12: VERTICAL REFRAMING DEEP DIVE
+         =========================================== -->
+    <section class="slide slide-peach" aria-label="Vertical Reframing">
+        <span class="slide-number">12</span>
+        <div class="slide-content">
+            <h2 class="reveal">Dual-mode vertical reframing</h2>
+            <div class="split-layout" style="margin-top: var(--content-gap);">
+                <div class="reveal-left">
+                    <div class="badge badge-mint" style="margin-bottom: var(--element-gap);">TRACK mode</div>
+                    <h3>Subject tracking</h3>
+                    <ul class="bullet-list" style="margin-top: var(--element-gap);">
+                        <li>MediaPipe face detection</li>
+                        <li>YOLOv8 fallback for full body</li>
+                        <li>"Heavy Tripod" stabilization</li>
+                        <li>SmoothedCameraman prevents jitter</li>
+                        <li>SpeakerTracker handles occlusions</li>
+                    </ul>
+                </div>
+                <div class="reveal">
+                    <div class="badge badge-pink" style="margin-bottom: var(--element-gap);">GENERAL mode</div>
+                    <h3>Blurred background</h3>
+                    <ul class="bullet-list" style="margin-top: var(--element-gap);">
+                        <li>Preserves full-width content</li>
+                        <li>Groups and landscape scenes</li>
+                        <li>Gaussian blur behind main frame</li>
+                        <li>No subject detection needed</li>
+                        <li>Best for multi-person shots</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 13: SOCIAL PUBLISHING
+         =========================================== -->
+    <section class="slide slide-lavender" aria-label="Social Publishing">
+        <span class="slide-number">13</span>
+        <div class="slide-content">
+            <h2 class="reveal">Publish everywhere</h2>
+            <p class="reveal" style="max-width: min(90vw, 600px);">Upload-Post integration handles async uploads to all major short-form platforms.</p>
+            <div class="feature-grid" style="max-width: min(90vw, 700px);">
+                <div class="feature-card reveal">
+                    <div class="icon">&#127917;</div>
+                    <h3>TikTok</h3>
+                    <p>Direct post with captions and tags</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#128248;</div>
+                    <h3>Instagram Reels</h3>
+                    <p>Optimized 9:16 with story-ready format</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#9654;&#65039;</div>
+                    <h3>YouTube Shorts</h3>
+                    <p>Upload with title, description, and tags</p>
+                </div>
+            </div>
+            <div class="badge-row reveal" style="margin-top: var(--content-gap);">
+                <span class="badge badge-yellow">Schedule for later</span>
+                <span class="badge badge-mint">Async uploads</span>
+                <span class="badge badge-pink">Free tier available</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 14: ARCHITECTURE OVERVIEW
+         =========================================== -->
+    <section class="slide slide-split grid-overlay" aria-label="Architecture">
+        <span class="slide-number">14</span>
+        <div class="slide-content">
+            <h2 class="reveal">Architecture</h2>
+            <div class="split-layout" style="margin-top: var(--content-gap);">
+                <div class="reveal-left">
+                    <h3 style="margin-bottom: var(--element-gap);">Frontend</h3>
+                    <ul class="bullet-list">
+                        <li>React 18 + Vite 4</li>
+                        <li>Tailwind CSS 3.4</li>
+                        <li>Encrypted localStorage for API keys</li>
+                        <li>Proxy to backend API</li>
+                    </ul>
+                </div>
+                <div class="reveal">
+                    <h3 style="margin-bottom: var(--element-gap);">Backend</h3>
+                    <ul class="bullet-list">
+                        <li>Python 3.11 + FastAPI</li>
+                        <li>Async job queue with semaphore</li>
+                        <li>FFmpeg for all video processing</li>
+                        <li>S3 for cloud storage</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 15: KEY FILES
+         =========================================== -->
+    <section class="slide slide-peach" aria-label="Key Files">
+        <span class="slide-number">15</span>
+        <div class="slide-content">
+            <h2 class="reveal">Core files</h2>
+            <table class="styled-table reveal" style="max-width: min(90vw, 750px);">
+                <thead>
+                    <tr>
+                        <th>File</th>
+                        <th>Purpose</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><code>main.py</code></td><td>Core video processing: transcription, scene detection, reframing</td></tr>
+                    <tr><td><code>app.py</code></td><td>FastAPI server with async job queue and REST endpoints</td></tr>
+                    <tr><td><code>editor.py</code></td><td>Gemini AI for dynamic FFmpeg filter generation</td></tr>
+                    <tr><td><code>hooks.py</code></td><td>Hook text overlay rendering with custom fonts</td></tr>
+                    <tr><td><code>subtitles.py</code></td><td>SRT generation and FFmpeg subtitle burning</td></tr>
+                    <tr><td><code>translate.py</code></td><td>ElevenLabs dubbing API integration</td></tr>
+                    <tr><td><code>s3_uploader.py</code></td><td>AWS S3 upload with caching layer</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 16: TECH STACK
+         =========================================== -->
+    <section class="slide slide-lavender" aria-label="Tech Stack">
+        <span class="slide-number">16</span>
+        <div class="slide-content">
+            <h2 class="reveal">Tech stack</h2>
+            <div class="feature-grid">
+                <div class="feature-card reveal">
+                    <div class="icon">&#128013;</div>
+                    <h3>Backend</h3>
+                    <p>Python 3.11, FastAPI, google-genai, faster-whisper, YOLOv8, MediaPipe, OpenCV, yt-dlp, FFmpeg</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#9881;&#65039;</div>
+                    <h3>Frontend</h3>
+                    <p>React 18, Vite 4, Tailwind CSS 3.4</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#129302;</div>
+                    <h3>AI APIs</h3>
+                    <p>Google Gemini, fal.ai (Flux, Hailuo, VEED, Kling), ElevenLabs</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#128230;</div>
+                    <h3>Infrastructure</h3>
+                    <p>Docker + Docker Compose, AWS S3 (private + public buckets)</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#128225;</div>
+                    <h3>Publishing</h3>
+                    <p>Upload-Post API for TikTok, Instagram, YouTube</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#128270;</div>
+                    <h3>SEO</h3>
+                    <p>FastAPI gallery pages with JSON-LD, og:video tags</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 17: API ENDPOINTS
+         =========================================== -->
+    <section class="slide slide-peach" aria-label="API Endpoints">
+        <span class="slide-number">17</span>
+        <div class="slide-content">
+            <h2 class="reveal">REST API</h2>
+            <table class="styled-table reveal" style="max-width: min(90vw, 750px);">
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Route</th>
+                        <th>What it does</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td><span class="badge badge-mint" style="padding: 0.15rem 0.5rem;">POST</span></td><td><code>/api/process</code></td><td>Submit video for processing</td></tr>
+                    <tr><td><span class="badge badge-blue" style="padding: 0.15rem 0.5rem;">GET</span></td><td><code>/api/status/{id}</code></td><td>Poll job status and logs</td></tr>
+                    <tr><td><span class="badge badge-mint" style="padding: 0.15rem 0.5rem;">POST</span></td><td><code>/api/edit</code></td><td>Apply AI video effects</td></tr>
+                    <tr><td><span class="badge badge-mint" style="padding: 0.15rem 0.5rem;">POST</span></td><td><code>/api/subtitle</code></td><td>Generate and burn subtitles</td></tr>
+                    <tr><td><span class="badge badge-mint" style="padding: 0.15rem 0.5rem;">POST</span></td><td><code>/api/hook</code></td><td>Add text hook overlays</td></tr>
+                    <tr><td><span class="badge badge-mint" style="padding: 0.15rem 0.5rem;">POST</span></td><td><code>/api/translate</code></td><td>AI voice dubbing</td></tr>
+                    <tr><td><span class="badge badge-mint" style="padding: 0.15rem 0.5rem;">POST</span></td><td><code>/api/social/post</code></td><td>Post to social media</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 18: GETTING STARTED
+         =========================================== -->
+    <section class="slide slide-split grid-overlay" aria-label="Getting Started">
+        <span class="slide-number">18</span>
+        <div class="slide-content">
+            <h2 class="reveal">Getting started</h2>
+            <div class="code-block reveal" style="max-width: min(90vw, 600px);">
+                <span class="comment"># Clone the repo</span><br>
+                <span class="func">git</span> clone https://github.com/your-username/OpenShorts.git<br>
+                <span class="func">cd</span> OpenShorts<br><br>
+                <span class="comment"># (Optional) Configure S3 backup</span><br>
+                <span class="func">cp</span> .env.example .env<br><br>
+                <span class="comment"># Launch everything</span><br>
+                <span class="func">docker</span> compose up --build<br><br>
+                <span class="comment"># Open http://localhost:5175</span>
+            </div>
+            <p class="reveal" style="margin-top: var(--content-gap); max-width: min(90vw, 600px);">Add your API keys in Settings: Gemini (required), fal.ai (for AI Shorts), ElevenLabs (for dubbing).</p>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 19: CONFIGURATION
+         =========================================== -->
+    <section class="slide slide-lavender" aria-label="Configuration">
+        <span class="slide-number">19</span>
+        <div class="slide-content">
+            <h2 class="reveal">Configuration</h2>
+            <div class="split-layout" style="margin-top: var(--content-gap);">
+                <div class="reveal-left">
+                    <h3 style="margin-bottom: var(--element-gap);">Server-side (.env)</h3>
+                    <ul class="bullet-list">
+                        <li>AWS_ACCESS_KEY_ID</li>
+                        <li>AWS_SECRET_ACCESS_KEY</li>
+                        <li>AWS_REGION / AWS_S3_BUCKET</li>
+                        <li>MAX_CONCURRENT_JOBS</li>
+                    </ul>
+                </div>
+                <div class="reveal">
+                    <h3 style="margin-bottom: var(--element-gap);">Client-side (encrypted)</h3>
+                    <ul class="bullet-list">
+                        <li>GEMINI_API_KEY (required)</li>
+                        <li>FAL_KEY (for AI Shorts)</li>
+                        <li>ELEVENLABS_API_KEY</li>
+                        <li>UPLOAD_POST_API_KEY</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="badge-row reveal" style="margin-top: var(--content-gap);">
+                <span class="badge badge-mint">Keys encrypted client-side</span>
+                <span class="badge badge-yellow">Never stored on server</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 20: SECURITY
+         =========================================== -->
+    <section class="slide slide-peach" aria-label="Security">
+        <span class="slide-number">20</span>
+        <div class="slide-content">
+            <h2 class="reveal">Security and performance</h2>
+            <div class="feature-grid" style="max-width: min(90vw, 800px);">
+                <div class="feature-card reveal">
+                    <div class="icon">&#128274;</div>
+                    <h3>Non-root execution</h3>
+                    <p>Containers run as dedicated appuser, not root</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#9876;&#65039;</div>
+                    <h3>Concurrency control</h3>
+                    <p>Semaphore-based job queue (MAX_CONCURRENT_JOBS)</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#128465;&#65039;</div>
+                    <h3>Auto-cleanup</h3>
+                    <p>Old jobs purged after 1 hour retention</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#128272;</div>
+                    <h3>Encrypted keys</h3>
+                    <p>API keys encrypted in browser, never server-stored</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#128203;</div>
+                    <h3>Upload validation</h3>
+                    <p>Format and minimum size checks on image uploads</p>
+                </div>
+                <div class="feature-card reveal">
+                    <div class="icon">&#128200;</div>
+                    <h3>2GB file limit</h3>
+                    <p>Upload size protection to prevent abuse</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 21: COST BREAKDOWN
+         =========================================== -->
+    <section class="slide slide-lavender" aria-label="Cost Breakdown">
+        <span class="slide-number">21</span>
+        <div class="slide-content">
+            <h2 class="reveal">What it costs to run</h2>
+            <div class="split-layout" style="margin-top: var(--content-gap);">
+                <div class="reveal-left">
+                    <h3 style="margin-bottom: var(--element-gap);">Free tier covers a lot</h3>
+                    <ul class="bullet-list">
+                        <li>Gemini API: free tier available</li>
+                        <li>ElevenLabs: free tier for basic dubbing</li>
+                        <li>Upload-Post: free tier for social posting</li>
+                        <li>Self-hosted: your own hardware</li>
+                    </ul>
+                </div>
+                <div class="reveal">
+                    <h3 style="margin-bottom: var(--element-gap);">AI Shorts costs</h3>
+                    <ul class="bullet-list">
+                        <li>Low cost: ~$0.65/video (Hailuo + VEED)</li>
+                        <li>Premium: ~$2/video (Kling Avatar v2)</li>
+                        <li>fal.ai: pay-per-use billing</li>
+                        <li>S3: standard AWS storage rates</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 22: SOCIAL SETUP
+         =========================================== -->
+    <section class="slide slide-mixed" aria-label="Social Setup">
+        <span class="slide-number">22</span>
+        <div class="slide-content">
+            <h2 class="reveal">Social media setup</h2>
+            <p class="reveal" style="max-width: min(90vw, 600px);">Connect Upload-Post in 5 steps to enable direct publishing from OpenShorts.</p>
+            <div class="pipeline reveal" style="margin-top: var(--content-gap);">
+                <div class="pipeline-step"><span class="step-num">1</span> Register</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">2</span> Create profile</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">3</span> Connect accounts</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">4</span> Get API key</div>
+                <span class="pipeline-arrow">&#10140;</span>
+                <div class="pipeline-step"><span class="step-num">5</span> Paste in Settings</div>
+            </div>
+            <div class="badge-row reveal" style="margin-top: var(--content-gap);">
+                <span class="badge badge-pink">TikTok</span>
+                <span class="badge badge-purple">Instagram</span>
+                <span class="badge badge-coral">YouTube</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+         SLIDE 23: CLOSING / LINKS
+         =========================================== -->
+    <section class="slide slide-split grid-overlay title-slide" aria-label="Closing">
+        <div class="slide-content">
+            <div class="emoji-hero reveal">&#127916;</div>
+            <h1 class="reveal" style="font-size: var(--h2-size);">Start making shorts</h1>
+            <p class="subtitle reveal" style="margin-top: var(--element-gap); max-width: min(90vw, 500px);">MIT licensed. Self-hosted. No watermarks. No limits. Your videos, your platform.</p>
+            <div class="badge-row reveal" style="margin-top: var(--content-gap); justify-content: center;">
+                <a class="cta-btn" href="https://github.com/kamilstanuch/openshorts" target="_blank">GitHub Repo</a>
+                <a class="cta-btn cta-btn-outline" href="https://www.youtube.com/watch?v=xlyjD1qCaX0" target="_blank">Watch Tutorial</a>
+            </div>
+            <div class="badge-row reveal" style="margin-top: var(--element-gap); justify-content: center;">
+                <span class="badge badge-mint">Docker</span>
+                <span class="badge badge-pink">Gemini</span>
+                <span class="badge badge-yellow">FastAPI</span>
+                <span class="badge badge-blue">React</span>
+                <span class="badge badge-purple">FFmpeg</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- ===========================================
+       SLIDE PRESENTATION CONTROLLER
+       =========================================== -->
+    <script>
+        class SlidePresentation {
+            constructor() {
+                this.slides = document.querySelectorAll('.slide');
+                this.currentSlide = 0;
+                this.totalSlides = this.slides.length;
+                this.isScrolling = false;
+
+                this.setupIntersectionObserver();
+                this.setupKeyboardNav();
+                this.setupTouchNav();
+                this.setupProgressBar();
+                this.setupNavDots();
+                this.updateCounter();
+            }
+
+            /* --- Intersection Observer: triggers .visible on scroll --- */
+            setupIntersectionObserver() {
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach(entry => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('visible');
+                            const index = Array.from(this.slides).indexOf(entry.target);
+                            if (index !== -1) {
+                                this.currentSlide = index;
+                                this.updateProgressBar();
+                                this.updateNavDots();
+                                this.updateCounter();
+                            }
+                        }
+                    });
+                }, {
+                    threshold: 0.5
+                });
+
+                this.slides.forEach(slide => observer.observe(slide));
+            }
+
+            /* --- Keyboard: arrows, space, page up/down --- */
+            setupKeyboardNav() {
+                document.addEventListener('keydown', (e) => {
+                    switch(e.key) {
+                        case 'ArrowDown':
+                        case 'ArrowRight':
+                        case ' ':
+                        case 'PageDown':
+                            e.preventDefault();
+                            this.goToSlide(this.currentSlide + 1);
+                            break;
+                        case 'ArrowUp':
+                        case 'ArrowLeft':
+                        case 'PageUp':
+                            e.preventDefault();
+                            this.goToSlide(this.currentSlide - 1);
+                            break;
+                        case 'Home':
+                            e.preventDefault();
+                            this.goToSlide(0);
+                            break;
+                        case 'End':
+                            e.preventDefault();
+                            this.goToSlide(this.totalSlides - 1);
+                            break;
+                    }
+                });
+            }
+
+            /* --- Touch/swipe support --- */
+            setupTouchNav() {
+                let touchStartY = 0;
+                let touchStartX = 0;
+
+                document.addEventListener('touchstart', (e) => {
+                    touchStartY = e.touches[0].clientY;
+                    touchStartX = e.touches[0].clientX;
+                }, { passive: true });
+
+                document.addEventListener('touchend', (e) => {
+                    const touchEndY = e.changedTouches[0].clientY;
+                    const touchEndX = e.changedTouches[0].clientX;
+                    const diffY = touchStartY - touchEndY;
+                    const diffX = touchStartX - touchEndX;
+
+                    /* Only trigger on vertical swipes (not horizontal scrolling) */
+                    if (Math.abs(diffY) > Math.abs(diffX) && Math.abs(diffY) > 50) {
+                        if (diffY > 0) {
+                            this.goToSlide(this.currentSlide + 1);
+                        } else {
+                            this.goToSlide(this.currentSlide - 1);
+                        }
+                    }
+                }, { passive: true });
+            }
+
+            /* --- Progress bar across top --- */
+            setupProgressBar() {
+                this.progressBar = document.getElementById('progressBar');
+                this.updateProgressBar();
+            }
+
+            updateProgressBar() {
+                if (this.progressBar) {
+                    const progress = ((this.currentSlide + 1) / this.totalSlides) * 100;
+                    this.progressBar.style.width = progress + '%';
+                }
+            }
+
+            /* --- Navigation dots on right side --- */
+            setupNavDots() {
+                const navContainer = document.getElementById('navDots');
+                if (!navContainer) return;
+
+                this.slides.forEach((_, i) => {
+                    const dot = document.createElement('button');
+                    dot.className = 'nav-dot' + (i === 0 ? ' active' : '');
+                    dot.setAttribute('aria-label', 'Go to slide ' + (i + 1));
+                    dot.addEventListener('click', () => this.goToSlide(i));
+                    navContainer.appendChild(dot);
+                });
+
+                this.navDots = navContainer.querySelectorAll('.nav-dot');
+            }
+
+            updateNavDots() {
+                if (!this.navDots) return;
+                this.navDots.forEach((dot, i) => {
+                    dot.classList.toggle('active', i === this.currentSlide);
+                });
+            }
+
+            /* --- Slide counter top-right --- */
+            updateCounter() {
+                const counter = document.getElementById('slideCounter');
+                if (counter) {
+                    counter.textContent = (this.currentSlide + 1) + ' / ' + this.totalSlides;
+                }
+            }
+
+            /* --- Navigate to specific slide --- */
+            goToSlide(index) {
+                if (index < 0 || index >= this.totalSlides) return;
+                this.slides[index].scrollIntoView({ behavior: 'smooth' });
+            }
+        }
+
+        /* Initialize on DOM ready */
+        document.addEventListener('DOMContentLoaded', () => {
+            new SlidePresentation();
+        });
+    </script>
+</body>
+</html>
