@@ -132,8 +132,8 @@ All generated videos and avatars are saved to a public gallery with SEO pages fo
 
 ### 1. Clone
 ```bash
-git clone https://github.com/your-username/OpenShorts.git
-cd OpenShorts
+git clone https://github.com/jasperan/openshorts.git
+cd openshorts
 ```
 
 ### 2. Configure (optional)
