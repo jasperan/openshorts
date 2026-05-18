@@ -64,7 +64,7 @@ export default function ResultCard({ clip, index, jobId, uploadPostKey, uploadUs
                 try {
                     const jsonErr = JSON.parse(errText);
                     throw new Error(jsonErr.detail || errText);
-                } catch (e) {
+                } catch {
                     throw new Error(errText);
                 }
             }
@@ -270,7 +270,7 @@ export default function ResultCard({ clip, index, jobId, uploadPostKey, uploadUs
                 try {
                     const jsonErr = JSON.parse(errText);
                     throw new Error(jsonErr.detail || errText);
-                } catch (e) {
+                } catch {
                     throw new Error(errText);
                 }
             }

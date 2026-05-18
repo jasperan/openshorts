@@ -326,7 +326,7 @@ export default function ThumbnailStudio({ geminiApiKey, uploadPostKey, uploadUse
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(blobUrl);
-    } catch (e) {
+    } catch {
       // Fallback: open in new tab if fetch fails
       window.open(getApiUrl(url), '_blank');
     }

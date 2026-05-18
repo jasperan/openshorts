@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Upload, FileVideo, Sparkles, Youtube, Instagram, Share2, LogOut, ChevronDown, Check, Activity, LayoutDashboard, Settings, PlusCircle, History, Menu, X, Terminal, Shield, LayoutGrid, Image, Globe, RotateCcw } from 'lucide-react';
 // KeyInput removed - no API keys needed for core pipeline
 import MediaInput from './components/MediaInput';
@@ -39,7 +39,7 @@ const decrypt = (text) => {
         String.fromCharCode(c.charCodeAt(0) ^ SECRET_KEY.charCodeAt(i % SECRET_KEY.length))
       ).join('');
       return result;
-    } catch (e) {
+    } catch {
       // Fallback if decryption fails (might be old plain text)
       return '';
     }
@@ -194,7 +194,7 @@ function App() {
         setSessionRecovered(true);
         setTimeout(() => setSessionRecovered(false), 5000);
       }
-    } catch (e) {
+    } catch {
       localStorage.removeItem(SESSION_KEY);
     }
   }, []);
@@ -215,10 +215,10 @@ function App() {
         timestamp: Date.now()
       };
       localStorage.setItem(SESSION_KEY, JSON.stringify(sessionData));
-    } catch (e) {
+    } catch {
       // localStorage full or serialization error - ignore
     }
-  }, [jobId, status, results, activeTab]);
+  }, [jobId, status, results, activeTab, processingMedia]);
 
   useEffect(() => {
     if (uploadPostKey) {
@@ -235,11 +235,34 @@ function App() {
     }
   }, [falKey]);
 
+  const fetchUserProfiles = useCallback(async () => {
+    if (!uploadPostKey) return;
+    try {
+      const res = await fetch(getApiUrl('/api/social/user'), {
+        headers: { 'X-Upload-Post-Key': uploadPostKey }
+      });
+      if (!res.ok) throw new Error("Failed to fetch");
+      const data = await res.json();
+      if (data.profiles && data.profiles.length > 0) {
+        setUserProfiles(data.profiles);
+        // Auto select first if none selected
+        if (!uploadUserId) {
+          setUploadUserId(data.profiles[0].username);
+        }
+      } else {
+        alert("No profiles found for this API Key.");
+      }
+    } catch (e) {
+      alert("Error fetching User Profiles. Please check key.");
+      console.error(e);
+    }
+  }, [uploadPostKey, uploadUserId]);
+
   useEffect(() => {
     if (uploadPostKey && userProfiles.length === 0) {
       fetchUserProfiles();
     }
-  }, [uploadPostKey]);
+  }, [uploadPostKey, userProfiles.length, fetchUserProfiles]);
 
   useEffect(() => {
     let interval;
@@ -274,29 +297,6 @@ function App() {
     return () => clearInterval(interval);
   }, [status, jobId]);
 
-
-  const fetchUserProfiles = async () => {
-    if (!uploadPostKey) return;
-    try {
-      const res = await fetch(getApiUrl('/api/social/user'), {
-        headers: { 'X-Upload-Post-Key': uploadPostKey }
-      });
-      if (!res.ok) throw new Error("Failed to fetch");
-      const data = await res.json();
-      if (data.profiles && data.profiles.length > 0) {
-        setUserProfiles(data.profiles);
-        // Auto select first if none selected
-        if (!uploadUserId) {
-          setUploadUserId(data.profiles[0].username);
-        }
-      } else {
-        alert("No profiles found for this API Key.");
-      }
-    } catch (e) {
-      alert("Error fetching User Profiles. Please check key.");
-      console.error(e);
-    }
-  };
 
   const handleProcess = async (data) => {
     setStatus('processing');

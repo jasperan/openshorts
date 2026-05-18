@@ -45,7 +45,7 @@ export default function SubtitleModal({ isOpen, onClose, onGenerate, isProcessin
     const previewStyle = {
         fontFamily: fontName,
         color: fontColor,
-        fontSize: '20px',
+        fontSize: `${fontSize}px`,
         fontWeight: 'bold',
         maxWidth: '85%',
         padding: '6px 12px',
@@ -122,6 +122,22 @@ export default function SubtitleModal({ isOpen, onClose, onGenerate, isProcessin
                                     <option key={f.value} value={f.value} style={{ fontFamily: f.value }}>{f.label}</option>
                                 ))}
                             </select>
+                        </div>
+
+                        {/* Font Size */}
+                        <div>
+                            <label className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-2 block">Font Size</label>
+                            <div className="flex items-center gap-3">
+                                <input
+                                    type="range"
+                                    min="16"
+                                    max="48"
+                                    value={fontSize}
+                                    onChange={(e) => setFontSize(parseInt(e.target.value))}
+                                    className="w-full accent-primary"
+                                />
+                                <span className="w-10 text-right text-xs text-zinc-400">{fontSize}px</span>
+                            </div>
                         </div>
 
                         {/* Text Color */}

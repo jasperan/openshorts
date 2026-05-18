@@ -4,7 +4,6 @@ import { Download, Youtube, Instagram, Video, Copy, Check, Play } from 'lucide-r
 export default function GalleryCard({ clip }) {
     const [copied, setCopied] = useState(null);
     const [isVisible, setIsVisible] = useState(false);
-    const [hasLoaded, setHasLoaded] = useState(false);
     const cardRef = useRef(null);
     const videoRef = useRef(null);
 
@@ -26,13 +25,14 @@ export default function GalleryCard({ clip }) {
             }
         );
 
-        if (cardRef.current) {
-            observer.observe(cardRef.current);
+        const card = cardRef.current;
+        if (card) {
+            observer.observe(card);
         }
 
         return () => {
-            if (cardRef.current) {
-                observer.unobserve(cardRef.current);
+            if (card) {
+                observer.unobserve(card);
             }
         };
     }, []);
@@ -79,7 +79,6 @@ export default function GalleryCard({ clip }) {
                         className="w-full h-full object-cover"
                         playsInline
                         preload="metadata"
-                        onLoadedData={() => setHasLoaded(true)}
                     />
                 ) : (
                     <div className="w-full h-full flex items-center justify-center bg-zinc-900">

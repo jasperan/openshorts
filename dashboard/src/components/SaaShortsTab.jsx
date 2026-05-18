@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Globe, Sparkles, Download, Copy, Check, ChevronRight, ChevronLeft, Loader2, AlertCircle, Volume2, User, Film, Terminal, ChevronDown, RefreshCw, Zap, Target, TrendingUp, MessageSquare, Eye, Share2, Calendar, Upload } from 'lucide-react';
 import { getApiUrl } from '../config';
 
@@ -62,17 +62,14 @@ export default function SaaShortsTab({ geminiApiKey, elevenLabsKey, falKey, uplo
   // Step 2: Configure
   const [voices, setVoices] = useState([]);
   const [selectedVoice, setSelectedVoice] = useState('21m00Tcm4TlvDq8ikWAM');
-  const [actorDescription, setActorDescription] = useState('');
-  const [editedNarration, setEditedNarration] = useState('');
+  const [actorDescription, setActorDescription] = useState(() => loadCache()?.scripts?.[0]?.actor_description || '');
+  const [editedNarration, setEditedNarration] = useState(() => loadCache()?.scripts?.[0]?.full_narration || '');
   const [actorOptions, setActorOptions] = useState([]);
   const [selectedActor, setSelectedActor] = useState(null);
   const [generatingActors, setGeneratingActors] = useState(false);
   const [actorGallery, setActorGallery] = useState([]);
   const [loadingGallery, setLoadingGallery] = useState(false);
   const [uploadedActorPreview, setUploadedActorPreview] = useState(null); // {localPreview, serverUrl}
-  const [productPhoto, setProductPhoto] = useState(null); // {preview, serverUrl}
-  const [productDescription, setProductDescription] = useState('');
-
   // Step 3: Generate
   const [generating, setGenerating] = useState(false);
   const [jobId, setJobId] = useState(null);
@@ -91,14 +88,6 @@ export default function SaaShortsTab({ geminiApiKey, elevenLabsKey, falKey, uplo
   const [copied, setCopied] = useState('');
   const [logsExpanded, setLogsExpanded] = useState(true);
 
-  // Pre-fill from cache on mount
-  useEffect(() => {
-    if (fromCache && scripts.length > 0 && !actorDescription) {
-      setActorDescription(scripts[0].actor_description || '');
-      setEditedNarration(scripts[0].full_narration || '');
-    }
-  }, []);
-
   // Fetch actor gallery on mount
   useEffect(() => {
     setLoadingGallery(true);
@@ -109,12 +98,26 @@ export default function SaaShortsTab({ geminiApiKey, elevenLabsKey, falKey, uplo
       .finally(() => setLoadingGallery(false));
   }, []);
 
+  const fetchVoices = useCallback(async () => {
+    try {
+      const res = await fetch(getApiUrl('/api/saasshorts/voices'), {
+        headers: { 'X-ElevenLabs-Key': elevenLabsKey },
+      });
+      if (res.ok) {
+        const data = await res.json();
+        setVoices(data.voices || []);
+      }
+    } catch (e) {
+      console.error('Voices fetch error:', e);
+    }
+  }, [elevenLabsKey]);
+
   // Fetch voices on mount
   useEffect(() => {
     if (elevenLabsKey) {
       fetchVoices();
     }
-  }, [elevenLabsKey]);
+  }, [elevenLabsKey, fetchVoices]);
 
   // Poll generation status
   useEffect(() => {
@@ -152,20 +155,6 @@ export default function SaaShortsTab({ geminiApiKey, elevenLabsKey, falKey, uplo
     }
     return () => clearInterval(interval);
   }, [jobId, genStatus]);
-
-  const fetchVoices = async () => {
-    try {
-      const res = await fetch(getApiUrl('/api/saasshorts/voices'), {
-        headers: { 'X-ElevenLabs-Key': elevenLabsKey },
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setVoices(data.voices || []);
-      }
-    } catch (e) {
-      console.error('Voices fetch error:', e);
-    }
-  };
 
   const handleAnalyze = async () => {
     if (!url.trim() && !description.trim()) return;
