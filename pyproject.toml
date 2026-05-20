@@ -1,0 +1,37 @@
+[project]
+name = "openshorts"
+version = "0.1.0"
+requires-python = ">=3.12"
+dependencies = [
+    "scenedetect",
+    "ultralytics",
+    "torch",
+    "torchvision",
+    "tqdm",
+    "yt-dlp",
+    "faster-whisper",
+    "ollama",
+    "edge-tts",
+    "python-dotenv",
+    "mediapipe==0.10.14",
+    "boto3",
+    "fastapi",
+    "uvicorn",
+    "python-multipart",
+    "httpx",
+    "Pillow",
+    "beautifulsoup4"
+]
+
+[dependency-groups]
+dev = []
+
+[tool.uv]
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu124" }
