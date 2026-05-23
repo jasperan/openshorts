@@ -16,6 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from s3_uploader import upload_job_artifacts, list_all_clips, upload_actor_to_s3, list_actor_gallery, upload_video_to_gallery, list_video_gallery
+from job_artifacts import load_job_artifact_snapshot
 
 load_dotenv()
 
@@ -36,49 +37,8 @@ job_queue = asyncio.Queue()
 jobs: Dict[str, Dict] = {}
 thumbnail_sessions: Dict[str, Dict] = {}
 publish_jobs: Dict[str, Dict] = {}  # {publish_id: {status, result, error}}
-# Semester to limit concurrency to MAX_CONCURRENT_JOBS
+# Semaphore to limit concurrency to MAX_CONCURRENT_JOBS
 concurrency_semaphore = asyncio.Semaphore(MAX_CONCURRENT_JOBS)
-
-def _relocate_root_job_artifacts(job_id: str, job_output_dir: str) -> bool:
-    """
-    Backward-compat rescue:
-    If main.py accidentally wrote metadata/clips into OUTPUT_DIR root (e.g. output/<jobid>_...),
-    move them into output/<job_id>/ so the API can find and serve them.
-    """
-    try:
-        os.makedirs(job_output_dir, exist_ok=True)
-        root = OUTPUT_DIR
-        pattern = os.path.join(root, f"{job_id}_*_metadata.json")
-        meta_candidates = sorted(glob.glob(pattern), key=lambda p: os.path.getmtime(p), reverse=True)
-        if not meta_candidates:
-            return False
-
-        # Move the newest metadata and its associated clips.
-        metadata_path = meta_candidates[0]
-        base_name = os.path.basename(metadata_path).replace("_metadata.json", "")
-
-        # Move metadata
-        dest_metadata = os.path.join(job_output_dir, os.path.basename(metadata_path))
-        if os.path.abspath(metadata_path) != os.path.abspath(dest_metadata):
-            shutil.move(metadata_path, dest_metadata)
-
-        # Move any clips that match the same base_name into the job folder
-        clip_pattern = os.path.join(root, f"{base_name}_clip_*.mp4")
-        for clip_path in glob.glob(clip_pattern):
-            dest_clip = os.path.join(job_output_dir, os.path.basename(clip_path))
-            if os.path.abspath(clip_path) != os.path.abspath(dest_clip):
-                shutil.move(clip_path, dest_clip)
-
-        # Also move any temp_ clips that might remain
-        temp_clip_pattern = os.path.join(root, f"temp_{base_name}_clip_*.mp4")
-        for clip_path in glob.glob(temp_clip_pattern):
-            dest_clip = os.path.join(job_output_dir, os.path.basename(clip_path))
-            if os.path.abspath(clip_path) != os.path.abspath(dest_clip):
-                shutil.move(clip_path, dest_clip)
-
-        return True
-    except Exception:
-        return False
 
 async def cleanup_jobs():
     """Background task to remove old jobs and files."""
@@ -232,39 +192,14 @@ async def run_job(job_id, job_data):
         while process.poll() is None:
             await asyncio.sleep(2)
             
-            # Check for partial results every 2 seconds
-            # Look for metadata file
-            try:
-                json_files = glob.glob(os.path.join(output_dir, "*_metadata.json"))
-                if json_files:
-                    target_json = json_files[0]
-                    # Read metadata (it might be being written to, so simple try/except or just read)
-                    # Use a lock or just robust read? json.load might fail if file is partial.
-                    # Usually main.py writes it once at start (based on my review).
-                    if os.path.getsize(target_json) > 0:
-                        with open(target_json, 'r') as f:
-                            data = json.load(f)
-                            
-                        base_name = os.path.basename(target_json).replace('_metadata.json', '')
-                        clips = data.get('shorts', [])
-                        cost_analysis = data.get('cost_analysis')
-                        
-                        # Check which clips actually exist on disk
-                        ready_clips = []
-                        for i, clip in enumerate(clips):
-                             clip_filename = f"{base_name}_clip_{i+1}.mp4"
-                             clip_path = os.path.join(output_dir, clip_filename)
-                             if os.path.exists(clip_path) and os.path.getsize(clip_path) > 0:
-                                 # Checking if file is growing? For now assume if it exists and main.py moves it there, it's done.
-                                 # main.py writes to temp_... then moves to final name. So presence means ready!
-                                 clip['video_url'] = f"/videos/{job_id}/{clip_filename}"
-                                 ready_clips.append(clip)
-                        
-                        if ready_clips:
-                             jobs[job_id]['result'] = {'clips': ready_clips, 'cost_analysis': cost_analysis}
-            except Exception as e:
-                # Ignore read errors during processing
-                pass
+            snapshot = load_job_artifact_snapshot(
+                job_id,
+                output_dir,
+                ready_only=True,
+                allow_partial=True,
+            )
+            if snapshot:
+                jobs[job_id]['result'] = snapshot.to_result()
 
         returncode = process.returncode
         
@@ -276,27 +211,14 @@ async def run_job(job_id, job_data):
             loop = asyncio.get_event_loop()
             loop.run_in_executor(None, upload_job_artifacts, output_dir, job_id)
             
-            # Find result JSON
-            json_files = glob.glob(os.path.join(output_dir, "*_metadata.json"))
-            if not json_files:
-                # Backward-compat rescue if outputs were written to OUTPUT_DIR root
-                if _relocate_root_job_artifacts(job_id, output_dir):
-                    json_files = glob.glob(os.path.join(output_dir, "*_metadata.json"))
-            if json_files:
-                target_json = json_files[0] 
-                with open(target_json, 'r') as f:
-                    data = json.load(f)
-                
-                # Enhance result with video URLs
-                base_name = os.path.basename(target_json).replace('_metadata.json', '')
-                clips = data.get('shorts', [])
-                cost_analysis = data.get('cost_analysis')
-
-                for i, clip in enumerate(clips):
-                     clip_filename = f"{base_name}_clip_{i+1}.mp4"
-                     clip['video_url'] = f"/videos/{job_id}/{clip_filename}"
-                
-                jobs[job_id]['result'] = {'clips': clips, 'cost_analysis': cost_analysis}
+            snapshot = load_job_artifact_snapshot(
+                job_id,
+                output_dir,
+                ready_only=False,
+                allow_partial=False,
+            )
+            if snapshot:
+                jobs[job_id]['result'] = snapshot.to_result()
             else:
                  jobs[job_id]['status'] = 'failed'
                  jobs[job_id]['logs'].append("No metadata file generated.")
