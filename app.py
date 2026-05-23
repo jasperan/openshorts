@@ -17,6 +17,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from s3_uploader import upload_job_artifacts, list_all_clips, upload_actor_to_s3, list_actor_gallery, upload_video_to_gallery, list_video_gallery
 from job_artifacts import load_job_artifact_snapshot
+from job_store import PersistentJobStore
 
 load_dotenv()
 
@@ -34,7 +35,7 @@ JOB_RETENTION_SECONDS = 3600  # 1 hour retention
 
 # Application State
 job_queue = asyncio.Queue()
-jobs: Dict[str, Dict] = {}
+jobs = PersistentJobStore(os.path.join(OUTPUT_DIR, "jobs.json"))
 thumbnail_sessions: Dict[str, Dict] = {}
 publish_jobs: Dict[str, Dict] = {}  # {publish_id: {status, result, error}}
 # Semaphore to limit concurrency to MAX_CONCURRENT_JOBS
@@ -155,8 +156,7 @@ def enqueue_output(out, job_id):
             decoded_line = line.decode('utf-8').strip()
             if decoded_line:
                 print(f"📝 [Job Output] {decoded_line}")
-                if job_id in jobs:
-                    jobs[job_id]['logs'].append(decoded_line)
+                jobs.append_log(job_id, decoded_line)
     except Exception as e:
         print(f"Error reading output for job {job_id}: {e}")
     finally:
@@ -169,8 +169,8 @@ async def run_job(job_id, job_data):
     env = job_data['env']
     output_dir = job_data['output_dir']
     
-    jobs[job_id]['status'] = 'processing'
-    jobs[job_id]['logs'].append("Job started by worker.")
+    jobs.update_fields(job_id, status='processing')
+    jobs.append_log(job_id, "Job started by worker.")
     print(f"🎬 [run_job] Executing command for {job_id}: {' '.join(cmd)}")
     
     try:
@@ -188,7 +188,6 @@ async def run_job(job_id, job_data):
         t_log.start()
         
         # Async wait for process with incremental updates
-        start_wait = time.time()
         while process.poll() is None:
             await asyncio.sleep(2)
             
@@ -199,13 +198,13 @@ async def run_job(job_id, job_data):
                 allow_partial=True,
             )
             if snapshot:
-                jobs[job_id]['result'] = snapshot.to_result()
+                jobs.update_fields(job_id, result=snapshot.to_result())
 
         returncode = process.returncode
         
         if returncode == 0:
-            jobs[job_id]['status'] = 'completed'
-            jobs[job_id]['logs'].append("Process finished successfully.")
+            jobs.update_fields(job_id, status='completed')
+            jobs.append_log(job_id, "Process finished successfully.")
             
             # Start S3 upload in background (silent, non-blocking)
             loop = asyncio.get_event_loop()
@@ -218,17 +217,17 @@ async def run_job(job_id, job_data):
                 allow_partial=False,
             )
             if snapshot:
-                jobs[job_id]['result'] = snapshot.to_result()
+                jobs.update_fields(job_id, result=snapshot.to_result())
             else:
-                 jobs[job_id]['status'] = 'failed'
-                 jobs[job_id]['logs'].append("No metadata file generated.")
+                 jobs.update_fields(job_id, status='failed')
+                 jobs.append_log(job_id, "No metadata file generated.")
         else:
-            jobs[job_id]['status'] = 'failed'
-            jobs[job_id]['logs'].append(f"Process failed with exit code {returncode}")
+            jobs.update_fields(job_id, status='failed')
+            jobs.append_log(job_id, f"Process failed with exit code {returncode}")
             
     except Exception as e:
-        jobs[job_id]['status'] = 'failed'
-        jobs[job_id]['logs'].append(f"Execution error: {str(e)}")
+        jobs.update_fields(job_id, status='failed')
+        jobs.append_log(job_id, f"Execution error: {str(e)}")
 
 @app.post("/api/process")
 async def process_endpoint(
@@ -473,9 +472,6 @@ async def add_subtitles(req: SubtitleRequest):
     if req.job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
     
-    # Reload job data from disk just in case metadata was updated
-    job = jobs[req.job_id]
-    
     # We need to access metadata.json to get the transcript
     output_dir = os.path.join(OUTPUT_DIR, req.job_id)
     json_files = glob.glob(os.path.join(output_dir, "*_metadata.json"))
@@ -558,13 +554,13 @@ async def add_subtitles(req: SubtitleRequest):
         
     # 3. Update Result and Metadata
     # Update InMemory Jobs
-    if req.clip_index < len(job['result']['clips']):
-         job['result']['clips'][req.clip_index]['video_url'] = f"/videos/{req.job_id}/{output_filename}"
+    new_video_url = f"/videos/{req.job_id}/{output_filename}"
+    jobs.update_clip_video_url(req.job_id, req.clip_index, new_video_url)
     
     # Update Metadata on Disk (Persistence)
     try:
         if req.clip_index < len(clips):
-            clips[req.clip_index]['video_url'] = f"/videos/{req.job_id}/{output_filename}"
+            clips[req.clip_index]['video_url'] = new_video_url
             # Update the main data structure
             data['shorts'] = clips
             
@@ -578,7 +574,7 @@ async def add_subtitles(req: SubtitleRequest):
 
     return {
         "success": True,
-        "new_video_url": f"/videos/{req.job_id}/{output_filename}"
+        "new_video_url": new_video_url
     }
 
 class HookRequest(BaseModel):
@@ -594,7 +590,6 @@ async def add_hook(req: HookRequest):
     if req.job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
     
-    job = jobs[req.job_id]
     output_dir = os.path.join(OUTPUT_DIR, req.job_id)
     json_files = glob.glob(os.path.join(output_dir, "*_metadata.json"))
     
@@ -645,13 +640,13 @@ async def add_hook(req: HookRequest):
         
     # Update Persistence (Same logic as subtitles)
     # Update InMemory Jobs
-    if req.clip_index < len(job['result']['clips']):
-         job['result']['clips'][req.clip_index]['video_url'] = f"/videos/{req.job_id}/{output_filename}"
+    new_video_url = f"/videos/{req.job_id}/{output_filename}"
+    jobs.update_clip_video_url(req.job_id, req.clip_index, new_video_url)
     
     # Update Metadata on Disk
     try:
         if req.clip_index < len(clips):
-            clips[req.clip_index]['video_url'] = f"/videos/{req.job_id}/{output_filename}"
+            clips[req.clip_index]['video_url'] = new_video_url
             data['shorts'] = clips
             with open(json_files[0], 'w') as f:
                 json.dump(data, f, indent=4)
@@ -661,7 +656,7 @@ async def add_hook(req: HookRequest):
 
     return {
         "success": True,
-        "new_video_url": f"/videos/{req.job_id}/{output_filename}"
+        "new_video_url": new_video_url
     }
 
 class TranslateRequest(BaseModel):
@@ -685,7 +680,6 @@ async def translate_clip(
     if req.job_id not in jobs:
         raise HTTPException(status_code=404, detail="Job not found")
 
-    job = jobs[req.job_id]
     output_dir = os.path.join(OUTPUT_DIR, req.job_id)
     json_files = glob.glob(os.path.join(output_dir, "*_metadata.json"))
 
@@ -737,13 +731,13 @@ async def translate_clip(
         raise HTTPException(status_code=500, detail=str(e))
 
     # Update InMemory Jobs
-    if req.clip_index < len(job['result']['clips']):
-         job['result']['clips'][req.clip_index]['video_url'] = f"/videos/{req.job_id}/{output_filename}"
+    new_video_url = f"/videos/{req.job_id}/{output_filename}"
+    jobs.update_clip_video_url(req.job_id, req.clip_index, new_video_url)
 
     # Update Metadata on Disk
     try:
         if req.clip_index < len(clips):
-            clips[req.clip_index]['video_url'] = f"/videos/{req.job_id}/{output_filename}"
+            clips[req.clip_index]['video_url'] = new_video_url
             data['shorts'] = clips
             with open(json_files[0], 'w') as f:
                 json.dump(data, f, indent=4)
@@ -753,7 +747,7 @@ async def translate_clip(
 
     return {
         "success": True,
-        "new_video_url": f"/videos/{req.job_id}/{output_filename}"
+        "new_video_url": new_video_url
     }
 
 class SocialPostRequest(BaseModel):
