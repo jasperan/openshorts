@@ -16,6 +16,32 @@ def _get_client():
     return ollama.Client(host=OLLAMA_HOST, timeout=300)
 
 
+def extract_json(text: str, kind: str = "object"):
+    """Strip markdown fences and parse the first JSON object/array in `text`.
+
+    kind="object" extracts between the outermost '{' and '}'.
+    kind="array"  extracts between the outermost '[' and ']'.
+    Raises ValueError if no delimiters are found; json.JSONDecodeError on bad JSON.
+    """
+    if text.startswith("```json"):
+        text = text[7:]
+    elif text.startswith("```"):
+        text = text[3:]
+    if text.endswith("```"):
+        text = text[:-3]
+    text = text.strip()
+
+    open_ch, close_ch = ("[", "]") if kind == "array" else ("{", "}")
+    start_idx = text.find(open_ch)
+    end_idx = text.rfind(close_ch)
+    if start_idx != -1 and end_idx != -1:
+        text = text[start_idx : end_idx + 1]
+    else:
+        raise ValueError(f"No JSON {kind} found in LLM response: {text[:200]}")
+
+    return json.loads(text)
+
+
 def generate_text(prompt: str, model: str = None) -> str:
     """Send a text prompt to Ollama and return the response text."""
     model = model or DEFAULT_MODEL
@@ -37,24 +63,7 @@ def generate_json(prompt: str, model: str = None) -> dict:
     if not text or not text.strip():
         raise ValueError("LLM returned empty response")
 
-    # Clean markdown wrappers
-    if text.startswith("```json"):
-        text = text[7:]
-    elif text.startswith("```"):
-        text = text[3:]
-    if text.endswith("```"):
-        text = text[:-3]
-    text = text.strip()
-
-    # Extract JSON object
-    start_idx = text.find("{")
-    end_idx = text.rfind("}")
-    if start_idx != -1 and end_idx != -1:
-        text = text[start_idx : end_idx + 1]
-    else:
-        raise ValueError(f"No JSON object found in LLM response: {text[:200]}")
-
-    return json.loads(text)
+    return extract_json(text, kind="object")
 
 
 def generate_vision(prompt: str, image_paths: list, model: str = None) -> str:

@@ -15,7 +15,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
-from s3_uploader import upload_job_artifacts, list_all_clips, upload_actor_to_s3, list_actor_gallery, upload_video_to_gallery, list_video_gallery
+from s3_uploader import upload_job_artifacts, upload_actor_to_s3, list_actor_gallery, upload_video_to_gallery, list_video_gallery
 from job_artifacts import load_job_artifact_snapshot
 from job_store import PersistentJobStore
 
@@ -125,7 +125,14 @@ async def lifespan(app: FastAPI):
     worker_task = asyncio.create_task(process_queue())
     cleanup_task = asyncio.create_task(cleanup_jobs())
     yield
-    # Cleanup (optional: cancel worker)
+    # Cancel background tasks on shutdown
+    for task in (worker_task, cleanup_task):
+        task.cancel()
+    for task in (worker_task, cleanup_task):
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
 
 app = FastAPI(lifespan=lifespan)
 
@@ -899,8 +906,10 @@ async def get_social_user(api_key: str = Header(..., alias="X-Upload-Post-Key"))
                 return {"profiles": [], "error": "No profiles found"}
                 
             return {"profiles": profiles_list}
-            
-            
+
+
+        except HTTPException:
+            raise
         except Exception as e:
              raise HTTPException(status_code=500, detail=str(e))
 
@@ -1316,41 +1325,10 @@ async def thumbnail_publish_status(publish_id: str):
     return publish_jobs[publish_id]
 
 
-# @app.get("/api/gallery/clips")
-# async def get_gallery_clips(limit: int = 20, offset: int = 0, refresh: bool = False):
-#     """
-#     Fetch clips from S3 for the gallery with pagination.
-#
-#     Args:
-#         limit: Number of clips to return (default 20, max 100)
-#         offset: Starting position for pagination
-#         refresh: Force refresh cache
-#     """
-#     try:
-#         # Clamp limit to reasonable values
-#         limit = min(max(1, limit), 100)
-#
-#         # Get clips (uses cache internally)
-#         all_clips = list_all_clips(limit=limit + offset, force_refresh=refresh)
-#
-#         # Apply offset for pagination
-#         clips = all_clips[offset:offset + limit]
-#
-#         return {
-#             "clips": clips,
-#             "total": len(all_clips),
-#             "limit": limit,
-#             "offset": offset,
-#             "has_more": len(all_clips) > offset + limit
-#         }
-#     except Exception as e:
-#         print(f"❌ Gallery Error: {e}")
-#         raise HTTPException(status_code=500, detail=str(e))
-
-
 @app.get("/api/models")
 async def get_models():
     """Check which Ollama models are available."""
+    from llm_client import DEFAULT_MODEL, DEFAULT_VISION_MODEL
     try:
         import ollama as ollama_client
         client = ollama_client.Client(host=os.environ.get("OLLAMA_HOST", "http://localhost:11434"))
@@ -1358,8 +1336,8 @@ async def get_models():
         model_names = [m.get("name", m.get("model", "")) for m in models.get("models", [])]
 
         # Check required models
-        text_model = os.environ.get("OLLAMA_MODEL", "qwen3.5:9b")
-        vision_model = os.environ.get("OLLAMA_VISION_MODEL", "qwen2.5-vl:7b")
+        text_model = DEFAULT_MODEL
+        vision_model = DEFAULT_VISION_MODEL
 
         return {
             "available": model_names,
@@ -1373,8 +1351,8 @@ async def get_models():
         return {
             "available": [],
             "required": {
-                "text": {"model": "qwen3.5:9b", "ready": False},
-                "vision": {"model": "qwen2.5-vl:7b", "ready": False},
+                "text": {"model": DEFAULT_MODEL, "ready": False},
+                "vision": {"model": DEFAULT_VISION_MODEL, "ready": False},
             },
             "ollama_connected": False,
             "error": str(e),
@@ -1890,8 +1868,13 @@ async def saasshorts_generate(
                         with open(actor_local, "wb") as f:
                             f.write(resp.content)
                         selected_actor_path = actor_local
-            except Exception:
-                pass
+                    else:
+                        print(f"⚠️ Failed to download selected actor "
+                              f"({resp.status_code}) from {req.selected_actor_url}; "
+                              f"falling back to a generated actor.")
+            except Exception as e:
+                print(f"⚠️ Error downloading selected actor from "
+                      f"{req.selected_actor_url}: {e}; falling back to a generated actor.")
         else:
             src = os.path.join(OUTPUT_DIR, req.selected_actor_url.replace("/videos/", ""))
             if os.path.exists(src):

@@ -868,103 +868,6 @@ def get_viral_clips(transcript_result, video_duration):
     print("   📐 Falling back to rule-based clip detection...")
     return _rule_based_clips(transcript_result, video_duration)
 
-def remove_silence(video_path, transcript, output_path, min_silence_duration=0.3, padding=0.05):
-    """
-    Remove silent parts from a video based on word-level timestamps.
-
-    Args:
-        video_path: Input video path
-        transcript: Transcript dict with segments containing word-level timestamps
-        output_path: Output video path
-        min_silence_duration: Minimum gap (seconds) between words to consider as silence
-        padding: Extra time (seconds) to keep around speech boundaries
-
-    Returns:
-        Path to the silence-removed video, or original path if no significant silence found
-    """
-    # Collect all word timestamps
-    words = []
-    for segment in transcript.get("segments", []):
-        for word_info in segment.get("words", []):
-            words.append({"start": word_info["start"], "end": word_info["end"]})
-
-    if not words:
-        print("⚠️ No word timestamps found, skipping silence removal")
-        return video_path
-
-    # Sort by start time
-    words.sort(key=lambda w: w["start"])
-
-    # Build speech segments (merge words that are close together)
-    speech_segments = []
-    current_start = max(0, words[0]["start"] - padding)
-    current_end = words[0]["end"] + padding
-
-    for word in words[1:]:
-        gap = word["start"] - current_end
-        if gap > min_silence_duration:
-            # Found a significant silence gap
-            speech_segments.append((current_start, current_end))
-            current_start = max(0, word["start"] - padding)
-        current_end = word["end"] + padding
-
-    # Add the last segment
-    speech_segments.append((current_start, current_end))
-
-    # If we didn't find any significant silences, skip
-    total_speech = sum(end - start for start, end in speech_segments)
-
-    # Get video duration
-    probe_cmd = [
-        "ffprobe", "-v", "error", "-show_entries", "format=duration",
-        "-of", "csv=p=0", video_path,
-    ]
-    try:
-        video_duration = float(subprocess.check_output(probe_cmd).decode().strip())
-    except Exception:
-        print("⚠️ Could not probe video duration, skipping silence removal")
-        return video_path
-
-    silence_ratio = 1 - (total_speech / video_duration) if video_duration > 0 else 0
-
-    if silence_ratio < 0.05:
-        print(f"✅ Video has minimal silence ({silence_ratio:.1%}), skipping removal")
-        return video_path
-
-    print(f"✂️ Removing silence: {silence_ratio:.1%} of video is silent ({len(speech_segments)} speech segments)")
-
-    # Build FFmpeg concat filter
-    # Create a file listing segments for FFmpeg
-    segments_file = output_path + ".segments.txt"
-    temp_segments = []
-
-    # Use a single FFmpeg select filter instead of segment-and-concat
-    # Build a select expression that keeps only speech segments
-    select_parts = []
-    for start, end in speech_segments:
-        select_parts.append(f"between(t,{start:.3f},{end:.3f})")
-    select_expr = "+".join(select_parts)
-
-    cmd = [
-        "ffmpeg", "-y",
-        "-i", video_path,
-        "-vf", f"select='{select_expr}',setpts=N/FRAME_RATE/TB",
-        "-af", f"aselect='{select_expr}',asetpts=N/SR/TB",
-        "-c:v", "libx264", "-preset", "fast", "-crf", "18",
-        "-c:a", "aac",
-        output_path,
-    ]
-    result = subprocess.run(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE)
-
-    if result.returncode != 0 or not os.path.exists(output_path):
-        stderr = result.stderr.decode(errors="replace")[-300:] if result.stderr else "unknown"
-        print(f"⚠️ Silence removal failed: {stderr}")
-        return video_path
-
-    print(f"✅ Silence removed: {video_duration:.1f}s → {total_speech:.1f}s")
-    return output_path
-
-
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description="AutoCrop-Vertical with Viral Clip Detection.")
     
@@ -975,9 +878,6 @@ if __name__ == '__main__':
     parser.add_argument('-o', '--output', type=str, help="Output directory or file (if processing whole video).")
     parser.add_argument('--keep-original', action='store_true', help="Keep the downloaded YouTube video.")
     parser.add_argument('--skip-analysis', action='store_true', help="Skip AI analysis and convert the whole video.")
-    parser.add_argument('--remove-silence', action='store_true', default=True, help='Remove silent parts from video')
-    parser.add_argument('--keep-silence', action='store_true', default=False, help='Keep silent parts (disable silence removal)')
-    parser.add_argument('--silence-threshold', type=float, default=0.3, help='Minimum silence duration to remove (seconds)')
 
     args = parser.parse_args()
 
