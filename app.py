@@ -136,11 +136,23 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(lifespan=lifespan)
 
-# Enable CORS for frontend
+# Enable CORS for the local dashboard/frontend only.
+# A wildcard origin combined with allow_credentials=True made Starlette echo whatever Origin the
+# caller sent (verified: Origin: https://evil.example came back as Access-Control-Allow-Origin with
+# credentials allowed), so any website the user visited could call this unauthenticated API and read
+# its responses. The API has no cookie-based session, so credentials are not needed.
+_cors_origins = [
+    origin.strip()
+    for origin in os.getenv(
+        "OPENSHORTS_CORS_ORIGINS",
+        "http://localhost:5175,http://127.0.0.1:5175,http://localhost:5173,http://127.0.0.1:5173",
+    ).split(",")
+    if origin.strip()
+]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
+    allow_origins=_cors_origins,
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

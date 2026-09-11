@@ -3,7 +3,7 @@ services:
     build: .
     container_name: openshorts-backend
     ports:
-      - "8001:8000"
+      - "127.0.0.1:8001:8000"
     extra_hosts:
       - "host.docker.internal:host-gateway"
     environment:
@@ -21,7 +21,7 @@ services:
     build: ./dashboard
     container_name: openshorts-frontend
     ports:
-      - "5175:5173"
+      - "127.0.0.1:5175:5173"
     volumes:
       - ./dashboard:/app
       - /app/node_modules
