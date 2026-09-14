@@ -6,6 +6,21 @@
 
 **Free & open source AI video platform** with 3 tools in one: **Clip Generator**, **AI Shorts (UGC videos with AI actors)**, and **YouTube Studio**. Self-hosted with Docker. No watermarks, no limits.
 
+## A new cut of OpenShorts
+
+A film-led entrance, warm editorial typography, and a focused dark editing workspace. The landing page opens the existing studio directly.
+
+![OpenShorts film-led landing page](docs/visuals/desktop.jpg)
+
+<details><summary>Inside the studio · mobile layout</summary>
+
+![OpenShorts editing workspace](docs/visuals/studio.jpg)
+<img src="docs/visuals/mobile.jpg" alt="OpenShorts responsive landing page" width="320">
+
+</details>
+
+Actual browser captures; the coastal film still is an original generated illustration, not processed customer footage. Local editing and optional external providers remain distinct. [Visual notes and asset provenance](docs/visuals/README.md).
+
 <div align="center">
 
 **[View Interactive Presentation](docs/slides/presentation.html)** | Animated overview of the project

@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Noto+Serif:wght@700&display=swap');
+@import './studio.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -20,6 +21,13 @@
 .btn-primary {
   @apply bg-primary hover:bg-blue-600 text-white px-6 py-3 rounded-xl font-medium transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-primary/20;
 }
+
+:focus-visible { outline: 2px solid #c6dc88; outline-offset: 3px; }
+body { font-family: 'Helvetica Neue', Arial, sans-serif; font-variant-numeric: tabular-nums; }
+.glass-panel { background: #202720; border-color: #3a4436; box-shadow: 0 14px 32px -22px #080d08; }
+.btn-primary { background: #c6dc88; color: #20271b; box-shadow: none; }
+.btn-primary:hover { background: #daecaa; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
 
 /* Custom Scrollbar */
 .custom-scrollbar::-webkit-scrollbar {

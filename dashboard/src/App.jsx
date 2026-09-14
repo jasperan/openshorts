@@ -681,11 +681,11 @@ function App() {
 
           {/* View: Dashboard (Idle) */}
           {activeTab === 'dashboard' && status === 'idle' && (
-            <div className="h-full flex flex-col items-center justify-center p-6 animate-[fadeIn_0.3s_ease-out]">
+            <div className="h-full overflow-y-auto flex flex-col items-center p-6 md:p-12 animate-[fadeIn_0.3s_ease-out]">
               <div className="max-w-xl w-full text-center space-y-8">
                 <div className="space-y-4">
                   <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">
-                    Create Viral Shorts
+                    Your next great cut.
                   </h1>
                   <p className="text-zinc-400 text-lg">
                     Drop your long-form video URL or file below to instantly generate viral clips with AI.
