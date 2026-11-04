@@ -398,7 +398,7 @@ export default function SaaShortsTab({ geminiApiKey, elevenLabsKey, falKey, uplo
                   >
                     <div className="flex items-center justify-between mb-1">
                       <span className={`text-sm font-medium ${videoMode === 'lowcost' ? 'text-ink' : 'text-ink2'}`}>Low cost</span>
-                      <span className="timecode">~$0.80</span>
+                      <span className="timecode">~$0.55</span>
                     </div>
                     <p className="text-[11px] text-ink3 leading-relaxed">Hailuo 2.3 img2video + VEED Lipsync. Good movement + lip-sync. Recommended.</p>
                   </button>
@@ -1093,12 +1093,12 @@ export default function SaaShortsTab({ geminiApiKey, elevenLabsKey, falKey, uplo
               <div className="p-3 bg-raised rounded-lg border border-line">
                 <div className="flex items-center justify-between text-sm">
                   <span className="text-ink2">Estimated cost</span>
-                  <span className="text-positive font-medium">~${videoMode === 'lowcost' ? '0.65' : '2.50'}</span>
+                  <span className="text-positive font-medium">~${videoMode === 'lowcost' ? '0.55' : '2.00'}</span>
                 </div>
                 <div className="text-[11px] text-ink3 mt-1">
                   {videoMode === 'lowcost'
-                    ? 'Flux image ($0.05) + ElevenLabs voice ($0.10) + Hailuo 2.3 img2video ($0.19) + VEED Lipsync ($0.20) + Flux b-roll ($0.10)'
-                    : 'Flux image ($0.05) + ElevenLabs voice ($0.10) + Kling avatar ($1.69) + Kling b-roll ($0.70)'
+                    ? 'Flux ($0.05) + voice ($0.01) + Hailuo 2.3 img2video ($0.19) + VEED Lipsync ($0.20) + 2 Flux b-roll ($0.10)'
+                    : 'Flux ($0.05) + voice ($0.01) + Kling avatar ($1.12–1.40 by length) + Kling b-roll ($0.70)'
                   }
                 </div>
               </div>
@@ -1127,7 +1127,7 @@ export default function SaaShortsTab({ geminiApiKey, elevenLabsKey, falKey, uplo
                 ) : !selectedActor ? (
                   <><User size={14} /> Select an actor first</>
                 ) : (
-                  <><Film size={14} /> Generate Video (~${videoMode === 'lowcost' ? '0.65' : '2.00'})</>
+                  <><Film size={14} /> Generate Video (~${videoMode === 'lowcost' ? '0.55' : '2.00'})</>
                 )}
               </button>
             </div>

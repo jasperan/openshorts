@@ -761,7 +761,7 @@
                     <div class="stat-label">Platform cost</div>
                 </div>
                 <div class="stat-block">
-                    <div class="stat-value">~$0.65</div>
+                    <div class="stat-value">~$0.55</div>
                     <div class="stat-label">Per AI short</div>
                 </div>
                 <div class="stat-block">
@@ -784,7 +784,7 @@
         <div class="slide-content">
             <div class="badge badge-mint reveal" style="margin-bottom: var(--element-gap);">Tool 1</div>
             <h2 class="reveal">Clip Generator</h2>
-            <p class="reveal" style="max-width: min(90vw, 600px);">Paste a YouTube URL or upload a video. Gemini 2.0 Flash analyzes the transcript and scene boundaries, then extracts 3-15 viral-ready 9:16 clips automatically.</p>
+            <p class="reveal" style="max-width: min(90vw, 600px);">Paste a YouTube URL or upload a video. A local Ollama model (qwen3.5:4b) reads the transcript and the scene boundaries, then extracts 3-15 viral-ready 9:16 clips automatically.</p>
             <div class="badge-row reveal">
                 <span class="badge badge-yellow">YouTube URLs</span>
                 <span class="badge badge-pink">Local uploads</span>
@@ -805,7 +805,7 @@
                 <div class="feature-card reveal">
                     <div class="icon">&#129504;</div>
                     <h3>Viral moment detection</h3>
-                    <p>Gemini 2.0 Flash pinpoints 3-15 high-engagement segments (15-60s each)</p>
+                    <p>A local Ollama model pinpoints 3-15 high-engagement segments (15-60s each)</p>
                 </div>
                 <div class="feature-card reveal">
                     <div class="icon">&#127909;</div>
@@ -830,7 +830,7 @@
                 <div class="feature-card reveal">
                     <div class="icon">&#10024;</div>
                     <h3>AI video effects</h3>
-                    <p>Gemini generates custom FFmpeg filters for pro-level effects</p>
+                    <p>The local vision model writes custom FFmpeg filters for pro-level effects</p>
                 </div>
             </div>
         </div>
@@ -860,7 +860,7 @@
                 <span class="pipeline-arrow">&#10140;</span>
                 <div class="pipeline-step"><span class="step-num">8</span> Publish</div>
             </div>
-            <p class="reveal" style="margin-top: var(--content-gap); max-width: min(90vw, 600px);">YouTube download via yt-dlp, transcription with faster-whisper, scene boundaries from PySceneDetect, clip analysis from Gemini, precise cutting with FFmpeg.</p>
+            <p class="reveal" style="margin-top: var(--content-gap); max-width: min(90vw, 600px);">YouTube download via yt-dlp, transcription with faster-whisper, scene boundaries from PySceneDetect, clip analysis from the local Ollama model, precise cutting with FFmpeg.</p>
         </div>
     </section>
 
@@ -875,7 +875,7 @@
             <p class="reveal" style="max-width: min(90vw, 600px);">Generate marketing videos with AI actors for any product or business. No camera, no studio, no influencer budget. Describe your product or paste a URL.</p>
             <div class="stat-row reveal">
                 <div class="stat-block">
-                    <div class="stat-value">~$0.65</div>
+                    <div class="stat-value">~$0.55</div>
                     <div class="stat-label">Low cost mode</div>
                 </div>
                 <div class="stat-block">
@@ -1123,7 +1123,7 @@
                 <tbody>
                     <tr><td><code>main.py</code></td><td>Core video processing: transcription, scene detection, reframing</td></tr>
                     <tr><td><code>app.py</code></td><td>FastAPI server with async job queue and REST endpoints</td></tr>
-                    <tr><td><code>editor.py</code></td><td>Gemini AI for dynamic FFmpeg filter generation</td></tr>
+                    <tr><td><code>editor.py</code></td><td>Ollama vision model for dynamic FFmpeg filter generation</td></tr>
                     <tr><td><code>hooks.py</code></td><td>Hook text overlay rendering with custom fonts</td></tr>
                     <tr><td><code>subtitles.py</code></td><td>SRT generation and FFmpeg subtitle burning</td></tr>
                     <tr><td><code>translate.py</code></td><td>ElevenLabs dubbing API integration</td></tr>
@@ -1154,7 +1154,7 @@
                 <div class="feature-card reveal">
                     <div class="icon">&#129302;</div>
                     <h3>AI APIs</h3>
-                    <p>Google Gemini, fal.ai (Flux, Hailuo, VEED, Kling), ElevenLabs</p>
+                    <p>Ollama (local), Google Gemini, fal.ai (Flux, Hailuo, VEED, Kling), ElevenLabs</p>
                 </div>
                 <div class="feature-card reveal">
                     <div class="icon">&#128230;</div>
@@ -1220,7 +1220,7 @@
                 <span class="func">docker</span> compose up --build<br><br>
                 <span class="comment"># Open http://localhost:5175</span>
             </div>
-            <p class="reveal" style="margin-top: var(--content-gap); max-width: min(90vw, 600px);">Add your API keys in Settings: Gemini (required), fal.ai (for AI Shorts), ElevenLabs (for dubbing).</p>
+            <p class="reveal" style="margin-top: var(--content-gap); max-width: min(90vw, 600px);">Run Ollama on the host, then add your API keys in Settings: Gemini (for the AI Shorts script and the thumbnail), fal.ai (for AI Shorts), ElevenLabs (for dubbing).</p>
         </div>
     </section>
 
@@ -1320,7 +1320,7 @@
                 <div class="reveal">
                     <h3 style="margin-bottom: var(--element-gap);">AI Shorts costs</h3>
                     <ul class="bullet-list">
-                        <li>Low cost: ~$0.65/video (Hailuo + VEED)</li>
+                        <li>Low cost: ~$0.55/video (Hailuo + VEED)</li>
                         <li>Premium: ~$2/video (Kling Avatar v2)</li>
                         <li>fal.ai: pay-per-use billing</li>
                         <li>S3: standard AWS storage rates</li>
@@ -1371,6 +1371,7 @@
             </div>
             <div class="badge-row reveal" style="margin-top: var(--element-gap); justify-content: center;">
                 <span class="badge badge-mint">Docker</span>
+                <span class="badge badge-coral">Ollama</span>
                 <span class="badge badge-pink">Gemini</span>
                 <span class="badge badge-yellow">FastAPI</span>
                 <span class="badge badge-blue">React</span>

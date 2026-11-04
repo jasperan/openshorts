@@ -131,7 +131,7 @@ export default function Landing({ onLaunchApp }) {
       icon: Clapperboard,
       title: "AI Shorts",
       description: "UGC-style marketing video for a product: script, actor, voiceover, b-roll and subtitles, generated from a URL or a description.",
-      points: ['Script from a URL or a brief', 'Avatar with lip-sync', 'B-roll and subtitle overlays', 'From $0.65 per video'],
+      points: ['Script from a URL or a brief', 'Avatar with lip-sync', 'B-roll and subtitle overlays', 'From $0.55 per video'],
     },
     {
       icon: ImageIcon,
@@ -195,12 +195,12 @@ export default function Landing({ onLaunchApp }) {
     {
       icon: Clapperboard,
       title: "UGC video generator",
-      description: "Describe a product or paste its URL. The pipeline writes the script, generates the actor, adds b-roll and subtitles, and returns a 9:16 video. From $0.65."
+      description: "Describe a product or paste its URL. The pipeline writes the script, generates the actor, adds b-roll and subtitles, and returns a 9:16 video. From $0.55."
     },
     {
       icon: Music2,
       title: "Actors with lip-sync",
-      description: "Pick an actor from the gallery or use your own photo. The pipeline generates a talking head with lip-synced voiceover in English or Spanish. Two modes: $0.65 and $2.00 per video."
+      description: "Pick an actor from the gallery or use your own photo. The pipeline generates a talking head with lip-synced voiceover in English or Spanish. Two modes: $0.55 and $2.00 per video."
     },
   ];
 
@@ -213,20 +213,23 @@ export default function Landing({ onLaunchApp }) {
   ];
 
   const apis = [
-    { name: "Google Gemini", role: "Required for the AI Shorts script and the YouTube packaging", cost: "Free tier: 1,500 requests/day", icon: Cpu },
+    { name: "Google Gemini", role: "Required for the AI Shorts script and the thumbnail image", cost: "Free tier: 1,500 requests/day", icon: Cpu },
     { name: "ElevenLabs", role: "Dubbing and voiceover", cost: "Free tier included", icon: Languages },
     { name: "Upload-Post", role: "Publishing to YouTube, TikTok and Instagram", cost: "Free tier included", icon: Globe },
     { name: "fal.ai", role: "AI Shorts actors, talking-head video and lip-sync", cost: "Pay per use, from $0.04", icon: Zap },
   ];
 
   const stack = [
-    { name: "Gemini 3.0 Flash", desc: "Script and packaging" },
+    { name: "Gemini 3 Flash", desc: "AI Shorts script" },
+    { name: "Ollama · qwen3.5:4b", desc: "Clip analysis and titles" },
     { name: "faster-whisper", desc: "Transcription" },
+    { name: "PySceneDetect", desc: "Scene boundaries" },
     { name: "YOLOv8", desc: "Object detection" },
     { name: "MediaPipe", desc: "Face tracking" },
     { name: "FFmpeg", desc: "Video processing" },
     { name: "ElevenLabs", desc: "Voice and TTS" },
     { name: "fal.ai", desc: "Video generation" },
+    { name: "Upload-Post", desc: "Publishing" },
     { name: "React + Vite", desc: "Dashboard" },
     { name: "Docker", desc: "Deployment" },
   ];
@@ -242,7 +245,7 @@ export default function Landing({ onLaunchApp }) {
     },
     {
       question: "How does it compare to Opus Clip?",
-      answer: "Both detect moments and crop to vertical. OpenShorts is free and runs on your infrastructure, so files stay local. Opus Clip is a managed cloud service at $15–228/month. The trade-off is that OpenShorts needs Docker and a Gemini key for the packaging features."
+      answer: "Both detect moments and crop to vertical. OpenShorts is free and runs on your infrastructure, so files stay local. Opus Clip is a managed cloud service at $15–228/month. The trade-off is that OpenShorts needs Docker, Ollama for the clip analysis and a Gemini key for the AI Shorts script and the thumbnail."
     },
     {
       question: "How do I turn a YouTube video into a Short or a Reel?",
@@ -250,7 +253,7 @@ export default function Landing({ onLaunchApp }) {
     },
     {
       question: "What model detects the moments?",
-      answer: "The clip pipeline runs a local model through Ollama, configured in the dashboard settings, so analysis does not leave your machine. The AI Shorts script and the YouTube title and thumbnail generation use Gemini."
+      answer: "The clip pipeline runs a local model through Ollama, configured in the dashboard settings, so analysis does not leave your machine. The AI Shorts script and the thumbnail image use Gemini; the YouTube titles, the descriptions and the FFmpeg effects run on the same local model."
     },
     {
       question: "Can it translate and dub a clip?",
@@ -270,11 +273,11 @@ export default function Landing({ onLaunchApp }) {
     },
     {
       question: "What is the AI Shorts generator?",
-      answer: "It generates a marketing video for a product: you describe the product or paste its URL, and the pipeline writes a script, generates an actor with lip-synced voiceover, adds b-roll and subtitles, and returns a vertical video. Two cost modes: about $0.65 per video with Hailuo and VEED lip-sync, or about $2.00 with Kling Avatar v2."
+      answer: "It generates a marketing video for a product: you describe the product or paste its URL, and the pipeline writes a script, generates an actor with lip-synced voiceover, adds b-roll and subtitles, and returns a vertical video. Two cost modes: about $0.55 per video with Hailuo and VEED lip-sync, or about $2.00 with Kling Avatar v2."
     },
     {
       question: "What does an AI Shorts video cost?",
-      answer: "Only the external APIs charge. The low cost mode adds up to about $0.65: Flux image $0.05, ElevenLabs voice $0.10, Hailuo image-to-video $0.19, VEED lip-sync $0.20, b-roll $0.10. The premium mode is about $2.00 per video with Kling Avatar v2."
+      answer: "Only the external APIs charge. The low cost mode adds up to about $0.55: Flux image $0.05, ElevenLabs voice $0.01 for a 20 to 25 second script, Hailuo image-to-video $0.19, VEED lip-sync $0.20, and two Flux b-roll frames at $0.05 each. The premium mode is about $2.00: Flux image $0.05, voice $0.01, Kling Avatar v2 $1.12 to $1.40 depending on length, and Kling b-roll $0.70."
     },
     {
       question: "Which businesses does the UGC generator work for?",
@@ -567,8 +570,8 @@ export default function Landing({ onLaunchApp }) {
         <div className="max-w-3xl mx-auto">
           <h2 className="text-2xl md:text-3xl font-medium tracking-[-0.01em]">Start with a video you already have</h2>
           <p className="mt-3 text-ink2 max-w-xl leading-relaxed">
-            Docker Compose, a Gemini key for the packaging features, and a long video. No account and no
-            credit card.
+            Docker Compose, Ollama on the host for the clip analysis, a Gemini key for the AI Shorts script
+            and the thumbnail, and a long video. No account and no credit card.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             <button onClick={onLaunchApp} className="btn-primary">
