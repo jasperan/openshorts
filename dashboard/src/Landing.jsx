@@ -1,6 +1,7 @@
 import React from "react";
 import {
   ArrowUpRight,
+  Github,
   Scissors,
   Subtitles,
   ScanLine,
@@ -42,6 +43,36 @@ const tools = [
   ],
 ];
 
+/* The signature: a mono timecode with two sprocket ticks, on every clip and preview. */
+const Timecode = ({ at, className = "" }) => (
+  <span className={`shorts-timecode ${className}`}>
+    {at}
+    <span className="shorts-ticks" aria-hidden="true">
+      <i />
+      <i />
+    </span>
+  </span>
+);
+
+const questions = [
+  {
+    title: "What runs locally?",
+    body: "The core clipping workflow uses Ollama, transcription, scene detection, and FFmpeg on your machine. You supply the video and choose the final cuts.",
+  },
+  {
+    title: "Do I need paid services?",
+    body: "The project is open source and the clip pipeline costs nothing to run. Optional dubbing, AI actor generation, and social publishing use external providers with their own costs and data policies. The AI Shorts workspace is about $0.55 per video in the low-cost mode and about $2.00 with a Kling avatar.",
+  },
+  {
+    title: "Can I generate a video from scratch?",
+    body: "The AI Shorts workspace can turn a product brief into an actor-led video. Configure the required providers in Settings before starting.",
+  },
+  {
+    title: "How is this different from a hosted clipper?",
+    body: "A hosted clipper is a subscription at $15–228 a month and your footage sits on their servers. Here the files stay on your machine, there is no watermark and no per-video fee. The trade-off is that you run Docker and Ollama yourself.",
+  },
+];
+
 export default function Landing({ onLaunchApp }) {
   return (
     <div className="shorts-site">
@@ -50,8 +81,8 @@ export default function Landing({ onLaunchApp }) {
       </a>
       <nav className="shorts-nav" aria-label="Primary navigation">
         <a href="#" className="shorts-wordmark" aria-label="OpenShorts home">
-          <Scissors aria-hidden="true" size={23} /> OpenShorts
-          <span>STUDIO</span>
+          <Scissors aria-hidden="true" size={22} strokeWidth={1.5} /> OpenShorts
+          <span>Studio</span>
         </a>
         <div className="shorts-nav-links">
           <a href="#workflow">Workflow</a>
@@ -59,7 +90,7 @@ export default function Landing({ onLaunchApp }) {
           <a href="#questions">Good to know</a>
         </div>
         <button onClick={onLaunchApp} className="shorts-cta">
-          Open studio <ArrowUpRight size={17} aria-hidden="true" />
+          Open studio <ArrowUpRight size={16} aria-hidden="true" strokeWidth={1.5} />
         </button>
       </nav>
       <main id="content">
@@ -77,14 +108,23 @@ export default function Landing({ onLaunchApp }) {
               The moments are already in your footage. Find them, frame them,
               and make them worth watching.
             </p>
-            <button
-              onClick={onLaunchApp}
-              className="shorts-cta shorts-cta-large"
-            >
-              Make your first cut <ArrowUpRight size={21} aria-hidden="true" />
-            </button>
+            <div className="shorts-actions">
+              <button
+                onClick={onLaunchApp}
+                className="shorts-cta shorts-cta-large"
+              >
+                Make your first cut <ArrowUpRight size={18} aria-hidden="true" strokeWidth={1.5} />
+              </button>
+              <a
+                href="https://github.com/jasperan/openshorts"
+                className="shorts-quiet"
+              >
+                <Github size={16} aria-hidden="true" strokeWidth={1.5} />
+                View the source
+              </a>
+            </div>
             <p className="shorts-fine">
-              YouTube link or local video · Built for 9:16
+              YouTube link or local video · 9:16 · subtitles · dubbing in 30+ languages
             </p>
           </div>
           <figure className="shorts-film">
@@ -96,11 +136,11 @@ export default function Landing({ onLaunchApp }) {
               height="941"
             />
             <div className="shorts-film-top" aria-hidden="true">
-              <span>THE ATLANTIC CUT</span>
-              <span>16:9 → 9:16</span>
+              <span>The Atlantic cut</span>
+              <Timecode at="00:28" />
             </div>
             <div className="shorts-crop" aria-hidden="true">
-              <span>FRAME THE MOMENT</span>
+              <span>Frame the moment</span>
               <b>
                 Some stories
                 <br />
@@ -108,7 +148,7 @@ export default function Landing({ onLaunchApp }) {
               </b>
             </div>
             <figcaption>
-              Illustrative still <span>01 / THE SOURCE MATERIAL</span>
+              Illustrative still <span>01 / The source material</span>
             </figcaption>
           </figure>
         </section>
@@ -164,7 +204,7 @@ export default function Landing({ onLaunchApp }) {
           <div className="shorts-tools">
             {tools.map(([Icon, title, description]) => (
               <article key={title}>
-                <Icon size={22} aria-hidden="true" />
+                <Icon size={18} strokeWidth={1.5} aria-hidden="true" />
                 <h3>{title}</h3>
                 <p>{description}</p>
               </article>
@@ -188,30 +228,12 @@ export default function Landing({ onLaunchApp }) {
             </a>
           </div>
           <div>
-            <article>
-              <h3>What runs locally?</h3>
-              <p>
-                The core clipping workflow uses Ollama, transcription, scene
-                detection, and FFmpeg on your machine. You supply the video and
-                choose the final cuts.
-              </p>
-            </article>
-            <article>
-              <h3>Do I need paid services?</h3>
-              <p>
-                The project is open source. Optional dubbing, AI actor
-                generation, cloud backup, and social publishing use external
-                providers and may have their own costs and data policies.
-              </p>
-            </article>
-            <article>
-              <h3>Can I generate a video from scratch?</h3>
-              <p>
-                The AI Shorts workspace can turn a product brief into an
-                actor-led video. Configure the required providers in Settings
-                before starting.
-              </p>
-            </article>
+            {questions.map((q) => (
+              <article key={q.title}>
+                <h3>{q.title}</h3>
+                <p>{q.body}</p>
+              </article>
+            ))}
           </div>
         </section>
       </main>

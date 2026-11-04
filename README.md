@@ -65,7 +65,7 @@ Generate marketing videos with AI actors for **any product or business**. No cam
 
 ![AI Shorts Setup](screenshots/ai-shorts.png)
 
-- **Two cost modes**: Low Cost (~$0.65/video) and Premium (~$2/video)
+- **Two cost modes**: Low Cost (~$0.55/video) and Premium (~$2/video)
 - Works for any business: SaaS, restaurants, e-commerce, coaching, local businesses
 - AI-generated actors with lip-sync, voiceover, b-roll, and TikTok-style subtitles
 - Choose from a shared avatar gallery or upload your own photo
@@ -96,12 +96,12 @@ All generated videos and avatars are saved to a public gallery with SEO pages fo
 ## Key Features
 
 ### Clip Generator
-- **Viral Moment Detection**: Google Gemini 3.0 Flash analyzes transcripts and scene boundaries to detect 3-15 high-potential moments
+- **Viral Moment Detection**: a local Ollama model (`qwen3.5:4b` by default) reads the timestamped transcript and scene boundaries and returns 3-15 scored moments, with a rule-based fallback when the model is unavailable
 - **Smart 9:16 Cropping**: Dual-mode AI reframing — TRACK mode (MediaPipe + YOLOv8 face tracking) and GENERAL mode (blurred background)
 - **Auto Subtitles**: faster-whisper with word-level timestamps, styled and burned into clips
 - **AI Voice Dubbing**: ElevenLabs integration for 30+ languages with voice cloning
 - **Hook Text Overlays**: AI-generated attention-grabbing text overlays
-- **AI Video Effects**: Gemini-generated FFmpeg filters for professional effects
+- **AI Video Effects**: the local Ollama vision model (`minicpm-v` by default) writes FFmpeg filters for professional effects
 
 ### AI Shorts Pipeline
 1. **Analyze**: Scrape website URL + web research, or generate from manual description
@@ -136,7 +136,8 @@ All generated videos and avatars are saved to a public gallery with SEO pages fo
 ## Requirements
 
 - **Docker & Docker Compose**
-- **Google Gemini API Key** ([Free — get it here](https://aistudio.google.com/app/apikey)) — required for all AI features
+- **Ollama** on the host ([install](https://ollama.com)) with `qwen3.5:4b` — runs the clip analysis, the titles and the effects
+- **Google Gemini API Key** ([Free — get it here](https://aistudio.google.com/app/apikey)) — required for the AI Shorts script and the thumbnail image
 - **fal.ai API Key** ([Pay-per-use](https://fal.ai)) — required for AI Shorts (actor generation, video, lip-sync)
 - **ElevenLabs API Key** ([Free tier](https://elevenlabs.io)) — required for voiceover/dubbing
 - **Upload-Post API Key** (Optional, [free tier](https://upload-post.com)) — for direct social posting
@@ -165,7 +166,7 @@ docker compose up --build
 ### 4. Open Dashboard
 Navigate to **`http://localhost:5175`**
 
-1. Go to **Settings** and enter your API keys (Gemini, fal.ai, ElevenLabs, Upload-Post)
+1. Go to **Settings** and enter your API keys (Gemini, fal.ai, ElevenLabs, Upload-Post); the Ollama endpoint and model are checked in the same tab
 2. **Clip Generator**: Paste a YouTube URL or upload a video to generate viral shorts
 3. **AI Shorts**: Describe your product or paste a URL to generate UGC marketing videos
 4. **YouTube Studio**: Generate thumbnails, titles, and descriptions for YouTube
@@ -179,7 +180,7 @@ Navigate to **`http://localhost:5175`**
 1. **Ingest** — YouTube download (yt-dlp) or local upload
 2. **Transcribe** — faster-whisper with word-level timestamps
 3. **Detect** — PySceneDetect for scene boundaries
-4. **Analyze** — Gemini identifies 3-15 viral moments (15-60s each)
+4. **Analyze** — the local Ollama model identifies 3-15 viral moments (15-60s each)
 5. **Extract** — FFmpeg precise clip cutting
 6. **Reframe** — AI vertical cropping with subject tracking
 7. **Effects** — Subtitles, hooks, AI video effects
@@ -204,7 +205,7 @@ Navigate to **`http://localhost:5175`**
 |-------|-----------|
 | Backend | Python 3.11, FastAPI, google-genai, faster-whisper, ultralytics (YOLOv8), mediapipe, opencv-python, yt-dlp, FFmpeg, httpx |
 | Frontend | React 18, Vite 4, Tailwind CSS 3.4 |
-| AI APIs | Google Gemini, fal.ai (Flux, Hailuo, VEED, Kling), ElevenLabs |
+| AI APIs | Ollama (local: clip analysis, titles, effects), Google Gemini (AI Shorts script, thumbnail), fal.ai (Flux, Hailuo, VEED, Kling), ElevenLabs |
 | Infrastructure | Docker + Docker Compose, AWS S3 |
 | Publishing | Upload-Post API (TikTok, Instagram, YouTube) |
 
@@ -221,11 +222,14 @@ Navigate to **`http://localhost:5175`**
 | `AWS_S3_BUCKET` | Private bucket for clip backup |
 | `AWS_S3_PUBLIC_BUCKET` | Public bucket for gallery/avatars |
 | `MAX_CONCURRENT_JOBS` | Concurrent processing limit (default: 5) |
+| `OLLAMA_HOST` | Ollama endpoint (default: `http://localhost:11434`; Docker: `http://host.docker.internal:11434`) |
+| `OLLAMA_MODEL` | Local text/JSON model for clip analysis and titles (default: `qwen3.5:4b`) |
+| `OLLAMA_VISION_MODEL` | Local vision model for the effects (default: `minicpm-v`) |
 
 **Client-side (encrypted in localStorage):**
 | Key | Description |
 |-----|------------|
-| `GEMINI_API_KEY` | Google Gemini — required |
+| `GEMINI_API_KEY` | Google Gemini — required for the AI Shorts script and thumbnails |
 | `FAL_KEY` | fal.ai — required for AI Shorts |
 | `ELEVENLABS_API_KEY` | ElevenLabs — required for voiceover/dubbing |
 | `UPLOAD_POST_API_KEY` | Upload-Post — optional, for social posting |
