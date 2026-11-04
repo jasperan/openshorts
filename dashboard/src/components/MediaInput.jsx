@@ -1,11 +1,19 @@
 import React, { useState } from 'react';
 import { Youtube, Upload, FileVideo, X, Layers } from 'lucide-react';
 
+const TABS = [
+    { id: 'url', label: 'YouTube URL', icon: Youtube },
+    { id: 'file', label: 'Upload file', icon: Upload },
+    { id: 'batch', label: 'Batch URLs', icon: Layers },
+];
+
 export default function MediaInput({ onProcess, onBatch, isProcessing }) {
     const [mode, setMode] = useState('url'); // 'url' | 'file' | 'batch'
     const [url, setUrl] = useState('');
     const [file, setFile] = useState(null);
     const [batchUrls, setBatchUrls] = useState('');
+
+    const batchCount = batchUrls.split('\n').filter(u => u.trim()).length;
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -30,82 +38,68 @@ export default function MediaInput({ onProcess, onBatch, isProcessing }) {
     };
 
     return (
-        <div className="bg-surface border border-white/5 rounded-2xl p-6 animate-[fadeIn_0.6s_ease-out]">
-            <div className="flex gap-4 mb-6 border-b border-white/5 pb-4">
-                <button
-                    onClick={() => setMode('url')}
-                    className={`flex items-center gap-2 pb-2 px-2 transition-all ${mode === 'url'
-                        ? 'text-primary border-b-2 border-primary -mb-[17px]'
-                        : 'text-zinc-400 hover:text-white'
-                        }`}
-                >
-                    <Youtube size={18} />
-                    YouTube URL
-                </button>
-                <button
-                    onClick={() => setMode('file')}
-                    className={`flex items-center gap-2 pb-2 px-2 transition-all ${mode === 'file'
-                        ? 'text-primary border-b-2 border-primary -mb-[17px]'
-                        : 'text-zinc-400 hover:text-white'
-                        }`}
-                >
-                    <Upload size={18} />
-                    Upload File
-                </button>
-                <button
-                    onClick={() => setMode('batch')}
-                    className={`flex items-center gap-2 pb-2 px-2 transition-all ${mode === 'batch'
-                        ? 'text-primary border-b-2 border-primary -mb-[17px]'
-                        : 'text-zinc-400 hover:text-white'
-                        }`}
-                >
-                    <Layers size={18} />
-                    Batch URLs
-                </button>
+        <div className="panel p-6">
+            <div className="flex gap-6 border-b border-line mb-5">
+                {TABS.map((tab) => {
+                    const active = mode === tab.id;
+                    return (
+                        <button
+                            key={tab.id}
+                            onClick={() => setMode(tab.id)}
+                            className={`flex items-center gap-2 h-10 -mb-px border-b text-[13px] transition-colors ${
+                                active
+                                    ? 'text-ink border-ink'
+                                    : 'text-ink3 border-transparent hover:text-ink2'
+                            }`}
+                        >
+                            <tab.icon size={15} />
+                            {tab.label}
+                        </button>
+                    );
+                })}
             </div>
 
             <form onSubmit={handleSubmit}>
                 {mode === 'url' ? (
-                    <div className="space-y-4">
-                        <input
-                            type="url"
-                            value={url}
-                            onChange={(e) => setUrl(e.target.value)}
-                            placeholder="https://www.youtube.com/watch?v=..."
-                            className="input-field"
-                            required
-                        />
-                    </div>
+                    <input
+                        type="url"
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        className="input-field h-10"
+                        aria-label="Video URL"
+                        required
+                    />
                 ) : mode === 'batch' ? (
-                    <div className="space-y-4">
+                    <div className="space-y-2">
                         <textarea
                             value={batchUrls}
                             onChange={(e) => setBatchUrls(e.target.value)}
-                            placeholder={"Paste one URL per line:\nhttps://www.youtube.com/watch?v=abc\nhttps://www.youtube.com/watch?v=def\nhttps://www.youtube.com/watch?v=ghi"}
-                            className="input-field min-h-[120px] resize-y font-mono text-sm"
+                            placeholder={"One URL per line\nhttps://www.youtube.com/watch?v=abc\nhttps://www.youtube.com/watch?v=def"}
+                            className="input-field min-h-[112px] resize-y font-mono text-[12px]"
                             rows={5}
+                            aria-label="Batch URLs"
                         />
-                        <p className="text-xs text-zinc-500">
-                            {batchUrls.split('\n').filter(u => u.trim()).length} URLs queued
-                        </p>
+                        <p className="timecode">{batchCount} queued</p>
                     </div>
                 ) : (
                     <div
-                        className={`border-2 border-dashed rounded-xl p-8 text-center transition-all ${file ? 'border-primary/50 bg-primary/5' : 'border-zinc-700 hover:border-zinc-500 bg-white/5'
+                        className={`border border-dashed rounded-lg p-8 text-center transition-colors ${file ? 'border-ink3 bg-raised' : 'border-line hover:border-ink3'
                             }`}
                         onDragOver={(e) => e.preventDefault()}
                         onDrop={handleDrop}
                     >
                         {file ? (
-                            <div className="flex items-center justify-center gap-3 text-white">
-                                <FileVideo className="text-primary" />
-                                <span className="font-medium">{file.name}</span>
+                            <div className="flex items-center justify-center gap-3 text-ink">
+                                <FileVideo size={16} className="text-ink3" />
+                                <span className="text-[13px]">{file.name}</span>
                                 <button
                                     type="button"
                                     onClick={() => setFile(null)}
-                                    className="p-1 hover:bg-white/10 rounded-full"
+                                    className="p-1 rounded text-ink3 hover:text-ink transition-colors"
+                                    aria-label="Remove file"
                                 >
-                                    <X size={16} />
+                                    <X size={14} />
                                 </button>
                             </div>
                         ) : (
@@ -116,9 +110,9 @@ export default function MediaInput({ onProcess, onBatch, isProcessing }) {
                                     onChange={(e) => setFile(e.target.files?.[0] || null)}
                                     className="hidden"
                                 />
-                                <Upload className="mx-auto mb-3 text-zinc-500" size={24} />
-                                <p className="text-zinc-400">Click to upload or drag and drop</p>
-                                <p className="text-xs text-zinc-600 mt-1">MP4, MOV up to 500MB</p>
+                                <Upload className="mx-auto mb-3 text-ink3" size={20} />
+                                <p className="text-[13px] text-ink2">Drop a video here, or click to choose one</p>
+                                <p className="text-[11px] text-ink3 mt-1">MP4 or MOV, up to 500MB</p>
                             </label>
                         )}
                     </div>
@@ -127,17 +121,17 @@ export default function MediaInput({ onProcess, onBatch, isProcessing }) {
                 <button
                     type="submit"
                     disabled={isProcessing || (mode === 'url' && !url) || (mode === 'file' && !file) || (mode === 'batch' && !batchUrls.trim())}
-                    className="w-full btn-primary mt-6 flex items-center justify-center gap-2"
+                    className="btn-primary w-full mt-5"
                 >
                     {isProcessing ? (
                         <>
-                            <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                            Processing Video...
+                            <span className="w-3.5 h-3.5 rounded-full border-2 border-[#111113]/30 border-t-[#111113] animate-spin" />
+                            Processing
                         </>
+                    ) : mode === 'batch' ? (
+                        `Process ${batchCount} videos`
                     ) : (
-                        <>
-                            {mode === 'batch' ? `Process ${batchUrls.split('\n').filter(u => u.trim()).length} Videos` : 'Generate Clips'}
-                        </>
+                        'Generate clips'
                     )}
                 </button>
             </form>

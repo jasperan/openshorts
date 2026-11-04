@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Upload, FileVideo, Sparkles, Youtube, Instagram, Share2, LogOut, ChevronDown, Check, Activity, LayoutDashboard, Settings, PlusCircle, History, Menu, X, Terminal, Shield, LayoutGrid, Image, Globe, RotateCcw } from 'lucide-react';
+import { ChevronDown, LayoutDashboard, Settings, PlusCircle, X, Terminal, LayoutGrid, Image as ImageIcon, RotateCcw, Github, Clapperboard, ArrowLeft, Youtube, Instagram } from 'lucide-react';
 // KeyInput removed - no API keys needed for core pipeline
 import MediaInput from './components/MediaInput';
 import ResultCard from './components/ResultCard';
@@ -62,23 +62,24 @@ const UserProfileSelector = ({ profiles, selectedUserId, onSelect }) => {
 
   const selectedProfile = profiles.find(p => p.username === selectedUserId) || profiles[0];
 
+  const platformState = (profile, name) =>
+    profile.connected.includes(name) ? 'text-ink2' : 'text-ink3/50';
+
   return (
     <div className="relative z-50">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center justify-between bg-surface border border-white/10 rounded-lg px-3 py-2 text-sm text-zinc-300 hover:bg-white/5 transition-colors min-w-[180px]"
+        className="h-8 flex items-center gap-2 bg-raised border border-line rounded-lg pl-1.5 pr-2.5 text-[13px] text-ink2 hover:border-ink3 transition-colors"
       >
-        <span className="flex items-center gap-2">
-          <div className="w-5 h-5 rounded-full bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-[10px] font-bold text-white">
-            {selectedProfile?.username?.substring(0, 1).toUpperCase() || "U"}
-          </div>
-          <span className="font-medium text-white truncate max-w-[100px]">{selectedProfile?.username || "Select User"}</span>
+        <span className="w-5 h-5 rounded-full bg-line flex items-center justify-center text-[11px] font-medium text-ink">
+          {selectedProfile?.username?.substring(0, 1).toUpperCase() || "U"}
         </span>
-        <ChevronDown size={14} className={`text-zinc-500 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+        <span className="text-ink truncate max-w-[120px]">{selectedProfile?.username || "Select profile"}</span>
+        <ChevronDown size={13} className={`text-ink3 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-2 right-0 w-64 bg-[#1a1a1a] border border-white/10 rounded-xl shadow-2xl overflow-hidden">
+        <div className="absolute top-full mt-2 right-0 w-64 panel overflow-hidden">
           <div className="max-h-60 overflow-y-auto custom-scrollbar">
             {profiles.map((profile) => (
               <button
@@ -87,31 +88,22 @@ const UserProfileSelector = ({ profiles, selectedUserId, onSelect }) => {
                   onSelect(profile.username);
                   setIsOpen(false);
                 }}
-                className="w-full flex items-center justify-between px-4 py-3 hover:bg-white/5 transition-colors text-left group border-b border-white/5 last:border-0"
+                className="w-full flex items-center justify-between gap-3 px-3 h-12 hover:bg-raised transition-colors text-left border-b border-line last:border-0"
               >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center text-xs font-bold text-white border border-white/10 shrink-0">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="w-6 h-6 rounded-full bg-line flex items-center justify-center text-[11px] text-ink shrink-0">
                     {profile.username.substring(0, 2).toUpperCase()}
                   </div>
                   <div className="min-w-0">
-                    <div className="text-sm font-medium text-zinc-200 group-hover:text-white transition-colors truncate">
-                      {profile.username}
-                    </div>
-                    <div className="flex gap-2 mt-0.5">
-                      {/* Status indicators */}
-                      <div className={`flex items-center gap-1 text-[10px] ${profile.connected.includes('tiktok') ? 'text-zinc-300' : 'text-zinc-600'}`}>
-                        <TikTokIcon size={10} />
-                      </div>
-                      <div className={`flex items-center gap-1 text-[10px] ${profile.connected.includes('instagram') ? 'text-pink-400' : 'text-zinc-600'}`}>
-                        <Instagram size={10} />
-                      </div>
-                      <div className={`flex items-center gap-1 text-[10px] ${profile.connected.includes('youtube') ? 'text-red-400' : 'text-zinc-600'}`}>
-                        <Youtube size={10} />
-                      </div>
+                    <div className="text-[13px] text-ink truncate">{profile.username}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <TikTokIcon size={11} className={platformState(profile, 'tiktok')} />
+                      <Instagram size={11} className={platformState(profile, 'instagram')} />
+                      <Youtube size={11} className={platformState(profile, 'youtube')} />
                     </div>
                   </div>
                 </div>
-                {selectedUserId === profile.username && <Check size={14} className="text-primary shrink-0" />}
+                {selectedUserId === profile.username && <span className="w-1.5 h-1.5 rounded-full bg-ink shrink-0" />}
               </button>
             ))}
           </div>
@@ -369,122 +361,107 @@ function App() {
 
   // --- UI Components ---
 
+  const navItems = [
+    { id: 'dashboard', label: 'Clip Generator', icon: LayoutDashboard },
+    { id: 'saasshorts', label: 'AI Shorts', icon: Clapperboard },
+    { id: 'ugc-gallery', label: 'UGC Gallery', icon: LayoutGrid },
+    { id: 'thumbnails', label: 'YouTube Studio', icon: ImageIcon },
+  ];
+
+  const currentView = navItems.find((item) => item.id === activeTab)?.label || 'Settings';
+
   const Sidebar = () => (
-    <div className="w-20 lg:w-64 bg-surface border-r border-white/5 flex flex-col h-full shrink-0 transition-all duration-300">
-      <div className="p-6 flex items-center gap-3">
-        <div className="w-8 h-8 bg-white/5 rounded-lg flex items-center justify-center shrink-0 overflow-hidden border border-white/5">
-          <img src="/logo-openshorts.png" alt="Logo" className="w-full h-full object-cover" />
-        </div>
-        <span className="font-bold text-lg text-white hidden lg:block tracking-tight">OpenShorts</span>
+    <div className="w-16 lg:w-60 bg-surface border-r border-line flex flex-col h-full shrink-0">
+      <div className="h-14 px-4 flex items-center gap-2.5 shrink-0">
+        <img src="/logo-openshorts.png" alt="OpenShorts" className="w-7 h-7 shrink-0" />
+        <span className="text-[15px] font-medium text-ink hidden lg:block">OpenShorts</span>
       </div>
 
-      <nav className="flex-1 px-4 py-4 space-y-2">
-        <button
-          onClick={() => setActiveTab('dashboard')}
-          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${activeTab === 'dashboard' ? 'bg-primary/10 text-primary' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
-        >
-          <LayoutDashboard size={20} />
-          <span className="font-medium hidden lg:block">Clip Generator</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('saasshorts')}
-          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${activeTab === 'saasshorts' ? 'bg-violet-500/10 text-violet-400' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
-        >
-          <Sparkles size={20} />
-          <span className="font-medium hidden lg:block">AI Shorts</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('ugc-gallery')}
-          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${activeTab === 'ugc-gallery' ? 'bg-violet-500/10 text-violet-400' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
-        >
-          <LayoutGrid size={20} />
-          <span className="font-medium hidden lg:block">UGC Gallery</span>
-        </button>
-
-        <button
-          onClick={() => setActiveTab('thumbnails')}
-          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${activeTab === 'thumbnails' ? 'bg-primary/10 text-primary' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
-        >
-          <Image size={20} />
-          <span className="font-medium hidden lg:block">YouTube Studio</span>
-        </button>
-
-        {/* <button
-          onClick={() => setActiveTab('gallery')}
-          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${activeTab === 'gallery' ? 'bg-primary/10 text-primary' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
-        >
-          <LayoutGrid size={20} />
-          <span className="font-medium hidden lg:block">Gallery</span>
-        </button> */}
-
-        <button
-          onClick={() => setActiveTab('settings')}
-          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${activeTab === 'settings' ? 'bg-primary/10 text-primary' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
-        >
-          <Settings size={20} />
-          <span className="font-medium hidden lg:block">Settings</span>
-        </button>
+      <nav className="flex-1 px-2 py-3 space-y-0.5">
+        {navItems.map((item) => {
+          const active = activeTab === item.id;
+          return (
+            <button
+              key={item.id}
+              onClick={() => setActiveTab(item.id)}
+              className={`w-full h-9 flex items-center gap-2.5 px-2.5 rounded-lg text-[13px] transition-colors ${
+                active ? 'bg-raised text-ink' : 'text-ink2 hover:text-ink hover:bg-raised/60'
+              }`}
+            >
+              <item.icon size={17} className="shrink-0" />
+              <span className="hidden lg:block truncate">{item.label}</span>
+            </button>
+          );
+        })}
       </nav>
 
-      <div className="p-4 border-t border-white/5 space-y-2">
-        <a
-          href="#"
-          onClick={(e) => { e.preventDefault(); localStorage.removeItem('openshorts_skip_landing'); window.location.hash = ''; window.location.reload(); }}
-          className="flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-colors group"
+      <div className="px-2 py-3 border-t border-line space-y-0.5">
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`w-full h-9 flex items-center gap-2.5 px-2.5 rounded-lg text-[13px] transition-colors ${
+            activeTab === 'settings' ? 'bg-raised text-ink' : 'text-ink2 hover:text-ink hover:bg-raised/60'
+          }`}
         >
-          <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center shrink-0">
-            <Globe size={16} />
-          </div>
-          <div className="hidden lg:block overflow-hidden">
-            <p className="text-sm font-bold text-white leading-none mb-0.5">Landing Page</p>
-            <p className="text-[10px] text-zinc-400 group-hover:text-zinc-300 transition-colors truncate">View website</p>
-          </div>
-        </a>
+          <Settings size={17} className="shrink-0" />
+          <span className="hidden lg:block">Settings</span>
+        </button>
         <a
           href="https://github.com/mutonby/openshorts"
           target="_blank"
           rel="noopener noreferrer"
-          className="flex items-center gap-2 p-3 bg-white/5 hover:bg-white/10 rounded-xl transition-colors group"
+          className="w-full h-9 flex items-center gap-2.5 px-2.5 rounded-lg text-[13px] text-ink2 hover:text-ink hover:bg-raised/60 transition-colors"
         >
-          <div className="w-8 h-8 rounded-full bg-white text-black flex items-center justify-center shrink-0">
-            <svg height="20" viewBox="0 0 16 16" version="1.1" width="20" aria-hidden="true"><path fillRule="evenodd" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"></path></svg>
-          </div>
-          <div className="hidden lg:block overflow-hidden">
-            <p className="text-sm font-bold text-white leading-none mb-0.5">Open Source</p>
-            <p className="text-[10px] text-zinc-400 group-hover:text-zinc-300 transition-colors truncate">Free & Community Driven</p>
-          </div>
+          <Github size={17} className="shrink-0" />
+          <span className="hidden lg:block">Source</span>
         </a>
+        <button
+          onClick={() => {
+            localStorage.removeItem('openshorts_skip_landing');
+            window.location.hash = '';
+            window.location.reload();
+          }}
+          className="w-full h-9 flex items-center gap-2.5 px-2.5 rounded-lg text-[13px] text-ink2 hover:text-ink hover:bg-raised/60 transition-colors"
+        >
+          <ArrowLeft size={17} className="shrink-0" />
+          <span className="hidden lg:block">Landing page</span>
+        </button>
       </div>
     </div>
   );
 
+  const SettingRow = ({ label, value, mono }) => (
+    <div className="flex items-center justify-between gap-6 py-2.5 border-b border-line last:border-0">
+      <span className="text-[13px] text-ink2">{label}</span>
+      <span className={mono ? 'timecode' : 'text-[13px] text-ink'}>{value}</span>
+    </div>
+  );
+
   return (
-    <div className="flex h-screen bg-background overflow-hidden selection:bg-primary/30">
+    <div className="flex h-screen bg-background overflow-hidden">
       <Sidebar />
 
-      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
-        {/* Background Gradients */}
-        <div className="absolute inset-0 overflow-hidden -z-10 pointer-events-none">
-          <div className="absolute -top-[10%] -right-[10%] w-[50%] h-[50%] bg-primary/5 rounded-full blur-[120px]" />
-        </div>
-
-        {/* Top Header */}
-        <header className="h-16 border-b border-white/5 bg-background/50 backdrop-blur-md flex items-center justify-between px-6 shrink-0 z-10">
-          <div className="flex items-center gap-4">
+      <main className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
+        <header className="h-14 border-b border-line flex items-center justify-between px-6 shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <h1 className="text-[15px] font-medium text-ink truncate">{currentView}</h1>
             {status !== 'idle' && (
-              <button
-                onClick={handleReset}
-                className="flex items-center gap-2 text-sm text-zinc-400 hover:text-white transition-colors"
-              >
-                <PlusCircle size={16} />
-                <span className="hidden sm:inline">New Project</span>
-              </button>
+              <span className="timecode hidden sm:inline">
+                {status === 'processing' ? 'running' : status === 'complete' ? 'done' : 'failed'}
+              </span>
             )}
           </div>
 
           <div className="flex items-center gap-4">
+            {status !== 'idle' && (
+              <button
+                onClick={handleReset}
+                className="btn-quiet h-8 text-[13px]"
+              >
+                <PlusCircle size={15} />
+                <span className="hidden sm:inline">New project</span>
+              </button>
+            )}
+
             {userProfiles.length > 0 && (
               <UserProfileSelector
                 profiles={userProfiles}
@@ -492,132 +469,110 @@ function App() {
                 onSelect={setUploadUserId}
               />
             )}
-
-            {/* Local AI - no API keys needed */}
           </div>
         </header>
 
-        {/* Session Recovery Banner */}
         {sessionRecovered && (
-          <div className="mx-6 mt-2 p-3 bg-primary/10 border border-primary/20 rounded-xl flex items-center justify-between animate-[fadeIn_0.3s_ease-out] shrink-0">
-            <div className="flex items-center gap-2 text-sm text-primary">
-              <RotateCcw size={16} />
-              <span className="font-medium">Session recovered</span>
-              <span className="text-zinc-400 text-xs">Your previous work has been restored.</span>
+          <div className="mx-6 mt-3 flex items-center justify-between gap-4 shrink-0 border border-line rounded-lg px-3 h-10 bg-surface">
+            <div className="flex items-center gap-2 text-[13px] text-ink2 min-w-0">
+              <RotateCcw size={14} className="text-ink3 shrink-0" />
+              <span className="text-ink">Session restored</span>
+              <span className="text-ink3 truncate">previous work recovered</span>
             </div>
-            <button onClick={() => setSessionRecovered(false)} className="text-zinc-500 hover:text-white transition-colors">
+            <button onClick={() => setSessionRecovered(false)} className="text-ink3 hover:text-ink transition-colors shrink-0">
               <X size={14} />
             </button>
           </div>
         )}
 
-        {/* Main Workspace */}
         <div className="flex-1 overflow-hidden relative">
-
-          {/* View: Settings */}
           {activeTab === 'settings' && (
-            <div className="h-full overflow-y-auto p-8 max-w-2xl mx-auto animate-[fadeIn_0.3s_ease-out]">
-              <div className="flex items-center justify-between mb-8">
-                <h1 className="text-2xl font-bold">Settings</h1>
-                <div className="px-3 py-1 bg-green-500/10 border border-green-500/20 rounded-full text-[10px] text-green-400 font-medium flex items-center gap-2">
-                  <Shield size={12} /> All AI runs locally. No cloud API keys needed.
-                </div>
-              </div>
-
-              <div className="glass-panel p-6 mb-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">Local AI Engine</h2>
-                  <span className="text-[10px] bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded text-green-400 uppercase tracking-wider">Active</span>
-                </div>
-                <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
-                  OpenShorts uses <strong>Ollama</strong> for AI processing. All models run on your machine. No data leaves your network.
-                </p>
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Text Model</span>
-                    <p className="text-sm text-white font-mono mt-1">qwen3.5:4b</p>
+            <div className="h-full overflow-y-auto custom-scrollbar">
+              <div className="max-w-3xl px-6 py-8 space-y-6">
+                <div className="panel p-6">
+                  <div className="flex items-baseline justify-between mb-1">
+                    <h2 className="text-[15px] font-medium">Local AI engine</h2>
+                    <span className="timecode">Ollama</span>
                   </div>
-                  <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider">Vision Model</span>
-                    <p className="text-sm text-white font-mono mt-1">minicpm-v</p>
-                  </div>
+                  <p className="text-[13px] text-ink2 leading-relaxed mb-4">
+                    Moment detection and editing run on models on your machine. Nothing about a video leaves
+                    your network.
+                  </p>
+                  <SettingRow label="Text model" value="qwen3.5:4b" mono />
+                  <SettingRow label="Vision model" value="minicpm-v" mono />
                 </div>
-              </div>
 
-              <div className="glass-panel p-6 mt-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">Social Integration</h2>
-                  <span className="text-[10px] bg-white/5 border border-white/5 px-2 py-0.5 rounded text-zinc-500 uppercase tracking-wider">Optional</span>
-                </div>
-                <p className="text-xs text-zinc-500 mb-6 leading-relaxed">
-                  Automatically publish your clips to TikTok, Instagram Reels, and YouTube Shorts via <strong>Upload-Post</strong>.
-                  Includes a <strong>free tier</strong> (no credit card required).
-                  If you prefer, you can skip this and manually download/upload your videos.
-                </p>
-                <div className="space-y-4">
-                  <label className="block text-sm text-zinc-400">Upload-Post API Key</label>
+                <div className="panel p-6">
+                  <div className="flex items-baseline justify-between mb-1">
+                    <h2 className="text-[15px] font-medium">Publishing</h2>
+                    <span className="timecode">optional</span>
+                  </div>
+                  <p className="text-[13px] text-ink2 leading-relaxed mb-4">
+                    Upload-Post publishes to TikTok, Instagram Reels and YouTube Shorts. It has a free tier.
+                    Without it you can still download the clips.
+                  </p>
+                  <label className="block text-[13px] text-ink2 mb-2" htmlFor="upload-post-key">API key</label>
                   <div className="flex gap-2">
                     <input
+                      id="upload-post-key"
                       type="password"
                       value={uploadPostKey}
                       onChange={(e) => setUploadPostKey(e.target.value)}
                       className="input-field"
                       placeholder="ey..."
                     />
-                    <button onClick={fetchUserProfiles} className="btn-primary py-2 px-4 text-sm">
+                    <button onClick={fetchUserProfiles} className="btn-primary h-10 shrink-0">
                       Connect
                     </button>
                   </div>
-                  <p className="text-xs text-zinc-500 leading-relaxed">
-                    Connect your Upload-Post account to enable one-click publishing.
-                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      <a href="https://app.upload-post.com/login" target="_blank" rel="noopener noreferrer" className="p-2 border border-white/5 rounded-lg hover:bg-white/5 transition-colors flex flex-col gap-1">
-                        <span className="text-zinc-400 font-medium">1. Login</span>
-                        <span className="text-[10px] text-zinc-600">Register account</span>
+                  <div className="mt-4 divide-y divide-line border-t border-line">
+                    {[
+                      { n: '01', label: 'Create an account', href: 'https://app.upload-post.com/login' },
+                      { n: '02', label: 'Connect your profiles', href: 'https://app.upload-post.com/manage-users' },
+                      { n: '03', label: 'Generate the API key', href: 'https://app.upload-post.com/api-keys' },
+                    ].map((step) => (
+                      <a
+                        key={step.n}
+                        href={step.href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-4 py-2.5 text-[13px] text-ink2 hover:text-ink transition-colors"
+                      >
+                        <span className="timecode">{step.n}</span>
+                        {step.label}
                       </a>
-                      <a href="https://app.upload-post.com/manage-users" target="_blank" rel="noopener noreferrer" className="p-2 border border-white/5 rounded-lg hover:bg-white/5 transition-colors flex flex-col gap-1">
-                        <span className="text-zinc-400 font-medium">2. Profiles</span>
-                        <span className="text-[10px] text-zinc-600">Create & Connect</span>
-                      </a>
-                      <a href="https://app.upload-post.com/api-keys" target="_blank" rel="noopener noreferrer" className="p-2 border border-white/5 rounded-lg hover:bg-white/5 transition-colors flex flex-col gap-1">
-                        <span className="text-zinc-400 font-medium">3. API Key</span>
-                        <span className="text-[10px] text-zinc-600">Generate key</span>
-                      </a>
-                    </div>
-                    <br />
-                    <span className="text-zinc-600 italic">
-                      Keys are only stored in your browser. They are sent to the backend only to process your request, never stored server-side.
-                    </span>
+                    ))}
+                  </div>
+                  <p className="mt-4 text-[11px] text-ink3 leading-relaxed">
+                    Keys are stored in your browser. They go to the backend only for the request that needs
+                    them and are not written server-side.
                   </p>
                 </div>
-              </div>
 
-              <div className="glass-panel p-6 mt-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">Video Translation</h2>
-                  <span className="text-[10px] bg-green-500/10 border border-green-500/20 px-2 py-0.5 rounded text-green-400 uppercase tracking-wider">Local</span>
+                <div className="panel p-6">
+                  <div className="flex items-baseline justify-between mb-1">
+                    <h2 className="text-[15px] font-medium">Translation</h2>
+                    <span className="timecode">local</span>
+                  </div>
+                  <p className="text-[13px] text-ink2 leading-relaxed">
+                    30+ languages through Ollama and edge-tts. Transcription, translation and speech run on
+                    your machine. Select a clip and use "Dub voice" to translate it.
+                  </p>
                 </div>
-                <p className="text-xs text-zinc-500 mb-4 leading-relaxed">
-                  Translate your clips to 30+ languages using local AI. Transcription, translation, and voice synthesis all run on your machine via Ollama and edge-tts. No API keys needed.
-                </p>
-                <div className="p-3 bg-green-500/5 border border-green-500/10 rounded-lg">
-                  <p className="text-xs text-green-400">Ready to use. Select any clip and click "Dub Voice" to translate.</p>
-                </div>
-              </div>
 
-              <div className="glass-panel p-6 mt-8">
-                <div className="flex items-center justify-between mb-4">
-                  <h2 className="text-lg font-semibold">AI Shorts (UGC Videos)</h2>
-                  <span className="text-[10px] bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded text-violet-400 uppercase tracking-wider">New</span>
-                </div>
-                <p className="text-xs text-zinc-500 mb-6 leading-relaxed">
-                  Generate UGC-style videos with AI actors for any product or business using <strong>fal.ai</strong>.
-                  Just describe your product or paste a URL. Requires fal.ai + ElevenLabs API keys.
-                </p>
-                <div className="space-y-4">
-                  <label className="block text-sm text-zinc-400">fal.ai API Key</label>
+                <div className="panel p-6">
+                  <div className="flex items-baseline justify-between mb-1">
+                    <h2 className="text-[15px] font-medium">AI Shorts</h2>
+                    <span className="timecode">fal.ai + ElevenLabs</span>
+                  </div>
+                  <p className="text-[13px] text-ink2 leading-relaxed mb-4">
+                    The UGC generator writes the script, generates the actor and adds the voiceover. It bills
+                    per video on fal.ai.
+                  </p>
+                  <label className="block text-[13px] text-ink2 mb-2" htmlFor="fal-key">fal.ai API key</label>
                   <div className="flex gap-2">
                     <input
+                      id="fal-key"
                       type="password"
                       value={falKey}
                       onChange={(e) => setFalKey(e.target.value)}
@@ -628,100 +583,78 @@ function App() {
                       onClick={() => {
                         if (falKey) {
                           localStorage.setItem('falKey_v1', encrypt(falKey));
-                          alert('fal.ai API Key saved!');
+                          alert('fal.ai API key saved.');
                         }
                       }}
-                      className="btn-primary py-2 px-4 text-sm"
+                      className="btn-primary h-10 shrink-0"
                     >
                       Save
                     </button>
                   </div>
-                  <p className="text-xs text-zinc-500 leading-relaxed">
-                    Get your API key from fal.ai to enable AI actor video generation.
-                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                      <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener noreferrer" className="p-2 border border-white/5 rounded-lg hover:bg-white/5 transition-colors flex flex-col gap-1">
-                        <span className="text-zinc-400 font-medium">1. Sign Up</span>
-                        <span className="text-[10px] text-zinc-600">Create fal.ai account</span>
-                      </a>
-                      <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener noreferrer" className="p-2 border border-white/5 rounded-lg hover:bg-white/5 transition-colors flex flex-col gap-1">
-                        <span className="text-zinc-400 font-medium">2. API Key</span>
-                        <span className="text-[10px] text-zinc-600">Generate key</span>
-                      </a>
-                    </div>
-                    <br />
-                    <span className="text-zinc-600 italic">
-                      Keys are only stored in your browser. Sent to backend only to process requests.
-                    </span>
-                  </p>
+                  <div className="mt-4 flex items-center gap-6 text-[13px]">
+                    <a href="https://fal.ai/dashboard/keys" target="_blank" rel="noopener noreferrer" className="text-ink2 hover:text-ink transition-colors">
+                      Create a key
+                    </a>
+                    <span className="text-ink3">Stored in your browser only</span>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
-          {/* View: SaaS Shorts */}
           {activeTab === 'saasshorts' && (
             <SaaShortsTab falKey={falKey} uploadPostKey={uploadPostKey} uploadUserId={uploadUserId} />
           )}
 
-          {/* View: UGC Gallery */}
           {activeTab === 'ugc-gallery' && (
             <UGCGallery />
           )}
 
-          {/* View: Thumbnails */}
           {activeTab === 'thumbnails' && (
             <ThumbnailStudio uploadPostKey={uploadPostKey} uploadUserId={uploadUserId} />
           )}
 
-          {/* View: Gallery */}
-          {/* {activeTab === 'gallery' && (
-            <Gallery />
-          )} */}
-
-          {/* View: Dashboard (Idle) */}
+          {/* Idle: the input is the screen */}
           {activeTab === 'dashboard' && status === 'idle' && (
-            <div className="h-full flex flex-col items-center justify-center p-6 animate-[fadeIn_0.3s_ease-out]">
-              <div className="max-w-xl w-full text-center space-y-8">
-                <div className="space-y-4">
-                  <h1 className="text-4xl md:text-5xl font-black bg-gradient-to-b from-white to-white/60 bg-clip-text text-transparent">
-                    Create Viral Shorts
-                  </h1>
-                  <p className="text-zinc-400 text-lg">
-                    Drop your long-form video URL or file below to instantly generate viral clips with AI.
-                  </p>
+            <div className="h-full overflow-y-auto custom-scrollbar">
+              <div className="max-w-3xl px-6 py-10 animate-rise">
+                <h2 className="text-2xl md:text-3xl font-medium tracking-[-0.01em] max-w-xl leading-tight">
+                  A long video in, vertical clips out
+                </h2>
+                <p className="mt-3 text-[15px] text-ink2 max-w-xl leading-relaxed">
+                  Paste a YouTube URL or drop a file. The pipeline finds the moments, cuts them to 9:16 and
+                  burns in the subtitles.
+                </p>
+
+                <div className="mt-8">
+                  <MediaInput onProcess={handleProcess} onBatch={handleBatch} isProcessing={status === 'processing'} />
                 </div>
 
-                <MediaInput onProcess={handleProcess} onBatch={handleBatch} isProcessing={status === 'processing'} />
-
-                <div className="flex items-center justify-center gap-8 text-zinc-500 text-sm">
-                  <span className="flex items-center gap-2"><Youtube size={16} /> YouTube</span>
-                  <span className="flex items-center gap-2"><Instagram size={16} /> Instagram</span>
-                  <span className="flex items-center gap-2"><TikTokIcon size={16} /> TikTok</span>
+                <div className="mt-6 flex items-center gap-6 text-[13px] text-ink3">
+                  <span className="flex items-center gap-2"><Youtube size={15} /> YouTube</span>
+                  <span className="flex items-center gap-2"><Instagram size={15} /> Instagram</span>
+                  <span className="flex items-center gap-2"><TikTokIcon size={15} /> TikTok</span>
                 </div>
               </div>
             </div>
           )}
 
-          {/* View: Processing / Results (Split View) */}
+          {/* Processing and results: preview and log on the left, clips on the right */}
           {activeTab === 'dashboard' && (status === 'processing' || status === 'complete' || status === 'error') && (
-            <div className="h-full flex flex-col md:flex-row animate-[fadeIn_0.3s_ease-out]">
+            <div className="h-full flex flex-col lg:flex-row">
 
-              {/* Left Panel: Preview & Status */}
-              <div className={`${status === 'complete' ? 'w-full md:w-[30%] lg:w-[25%]' : 'w-full md:w-[55%] lg:w-[60%]'} h-full flex flex-col border-r border-white/5 bg-black/20 p-6 overflow-y-auto custom-scrollbar transition-all duration-700 ease-in-out`}>
-                <div className="mb-6 flex items-center justify-between">
-                  <h2 className="text-lg font-semibold flex items-center gap-2">
-                    <Activity className={`text-primary ${status === 'processing' ? 'animate-pulse' : ''}`} size={20} />
-                    Live Analysis
-                  </h2>
-                  <span className={`text-xs px-2 py-1 rounded-full border ${status === 'processing' ? 'bg-primary/10 border-primary/20 text-primary' :
-                    status === 'complete' ? 'bg-green-500/10 border-green-500/20 text-green-400' :
-                      'bg-red-500/10 border-red-500/20 text-red-400'
-                    }`}>
-                    {status.toUpperCase()}
+              <div className="w-full lg:w-[360px] xl:w-[400px] shrink-0 h-full flex flex-col border-r border-line overflow-y-auto custom-scrollbar px-6 py-6">
+                <div className="flex items-center justify-between mb-4">
+                  <span className="timecode">
+                    {status === 'processing' ? 'analysing' : status === 'complete' ? 'analysis complete' : 'analysis failed'}
                   </span>
+                  {processingMedia && (
+                    <span className="timecode truncate max-w-[160px]">
+                      {processingMedia.type === 'file' ? processingMedia.payload?.name : 'source'}
+                    </span>
+                  )}
                 </div>
 
-                {/* Video Preview */}
                 {processingMedia && (
                   <ProcessingAnimation
                     media={processingMedia}
@@ -732,52 +665,56 @@ function App() {
                   />
                 )}
 
-                {/* Logs Terminal */}
-                <div className={`bg-[#0c0c0e] rounded-xl border border-white/10 overflow-hidden flex flex-col transition-all duration-500 ${status === 'complete' ? 'h-32 min-h-0 opacity-50 hover:opacity-100' : 'flex-1 min-h-[200px]'}`}>
-                  <div className="px-4 py-2 border-b border-white/5 flex items-center justify-between bg-white/5 shrink-0">
-                    <span className="text-xs font-mono text-zinc-400 flex items-center gap-2">
-                      <Terminal size={12} /> System Logs
+                <div className={`mt-6 rounded-lg border border-line overflow-hidden flex flex-col ${status === 'complete' ? 'h-40 shrink-0' : 'flex-1 min-h-[200px]'}`}>
+                  <div className="h-9 px-3 border-b border-line flex items-center justify-between shrink-0">
+                    <span className="flex items-center gap-2 timecode">
+                      <Terminal size={12} /> Log
                     </span>
-                    <button onClick={() => setLogsVisible(!logsVisible)} className="text-zinc-500 hover:text-white transition-colors">
-                      {logsVisible ? <ChevronDown size={14} /> : <ChevronDown size={14} className="rotate-180" />}
+                    <button
+                      onClick={() => setLogsVisible(!logsVisible)}
+                      className="text-ink3 hover:text-ink transition-colors"
+                      aria-label={logsVisible ? 'Hide log' : 'Show log'}
+                    >
+                      <ChevronDown size={14} className={logsVisible ? '' : 'rotate-180'} />
                     </button>
                   </div>
                   {logsVisible && (
-                    <div className="flex-1 p-4 overflow-y-auto font-mono text-xs space-y-1.5 custom-scrollbar text-zinc-400">
+                    <div className="flex-1 p-3 overflow-y-auto custom-scrollbar font-mono text-[11px] leading-relaxed space-y-1">
                       {logs.map((log, i) => (
-                        <div key={i} className={`flex gap-2 ${log.toLowerCase().includes('error') ? 'text-red-400' : 'text-zinc-400'}`}>
-                          <span className="text-zinc-700 shrink-0">{new Date().toLocaleTimeString()}</span>
-                          <span>{log}</span>
+                        <div
+                          key={i}
+                          className={log.toLowerCase().includes('error') ? 'text-marker' : 'text-ink2'}
+                        >
+                          {log}
                         </div>
                       ))}
-                      {status === 'processing' && (
-                        <div className="animate-pulse text-primary/70">_</div>
-                      )}
+                      {status === 'processing' && <div className="text-ink3">_</div>}
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Right Panel: Results Grid */}
-              <div className={`${status === 'complete' ? 'w-full md:w-[70%] lg:w-[75%]' : 'w-full md:w-[45%] lg:w-[40%]'} h-full flex flex-col bg-background p-6 transition-all duration-700 ease-in-out`}>
-                <h2 className="text-lg font-semibold mb-6 flex items-center gap-2 shrink-0">
-                  <Sparkles className="text-yellow-400" size={20} />
-                  Generated Shorts
-                  {results?.clips?.length > 0 && (
-                    <span className="text-xs bg-white/10 text-white px-2 py-0.5 rounded-full ml-auto">
-                      {results.clips.length} Clips
-                    </span>
-                  )}
+              <div className="flex-1 h-full flex flex-col p-6 min-w-0">
+                <div className="flex items-center justify-between mb-4 shrink-0">
+                  <div className="flex items-baseline gap-3">
+                    <h2 className="text-[15px] font-medium">Clips</h2>
+                    {results?.clips?.length > 0 && (
+                      <span className="timecode">{results.clips.length}</span>
+                    )}
+                  </div>
                   {results?.cost_analysis && (
-                    <span className="text-xs bg-green-500/10 border border-green-500/20 text-green-400 px-2 py-0.5 rounded-full ml-2" title={`Input: ${results.cost_analysis.input_tokens} | Output: ${results.cost_analysis.output_tokens}`}>
+                    <span
+                      className="timecode"
+                      title={`Input ${results.cost_analysis.input_tokens} tokens, output ${results.cost_analysis.output_tokens}`}
+                    >
                       ${results.cost_analysis.total_cost.toFixed(5)}
                     </span>
                   )}
-                </h2>
+                </div>
 
-                <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
+                <div className="flex-1 overflow-y-auto custom-scrollbar">
                   {results && results.clips && results.clips.length > 0 ? (
-                    <div className={`grid gap-4 pb-10 ${status === 'complete' ? 'grid-cols-1 xl:grid-cols-2' : 'grid-cols-1'}`}>
+                    <div className="grid grid-cols-1 gap-4 pb-10">
                       {results.clips.map((clip, i) => (
                         <ResultCard
                           key={i}
@@ -793,22 +730,21 @@ function App() {
                     </div>
                   ) : (
                     status === 'processing' ? (
-                      <div className="h-full flex flex-col items-center justify-center text-zinc-500 space-y-4 opacity-50">
-                        <div className="w-12 h-12 rounded-full border-2 border-zinc-800 border-t-primary animate-spin" />
-                        <p className="text-sm">Waiting for clips...</p>
+                      <div className="h-full flex flex-col items-start justify-center gap-3">
+                        <div className="w-5 h-5 rounded-full border-2 border-line border-t-ink2 animate-spin" />
+                        <p className="text-[13px] text-ink3">The first clip appears when the analysis lands</p>
                       </div>
                     ) : status === 'error' ? (
-                      <div className="h-full flex flex-col items-center justify-center text-red-400 space-y-2">
-                        <p>Generation failed.</p>
+                      <div className="h-full flex flex-col items-start justify-center gap-2">
+                        <p className="text-[13px] text-marker">Generation failed</p>
+                        <p className="text-[13px] text-ink3">The log on the left has the last message from the pipeline</p>
                       </div>
                     ) : null
                   )}
                 </div>
               </div>
-
             </div>
           )}
-
         </div>
       </main>
     </div>

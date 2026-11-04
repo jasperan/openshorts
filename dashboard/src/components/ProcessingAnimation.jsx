@@ -1,5 +1,12 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { Scan, Scissors, Activity, Radio, CheckCircle, Play } from 'lucide-react';
+
+
+const formatTime = (seconds) => {
+  const total = Math.max(0, Math.floor(seconds || 0));
+  const m = Math.floor(total / 60);
+  const sec = total % 60;
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+};
 
 const ProcessingAnimation = ({ media, isComplete, syncedTime, isSyncedPlaying, syncTrigger }) => {
   const [videoSrc, setVideoSrc] = useState(null);
@@ -129,27 +136,25 @@ const ProcessingAnimation = ({ media, isComplete, syncedTime, isSyncedPlaying, s
     return (match && match[2].length === 11) ? match[2] : null;
   };
 
-  const containerClasses = `relative w-full aspect-video rounded-xl overflow-hidden bg-black border border-white/10 shadow-2xl mb-8 group animate-[fadeIn_0.5s_ease-out] transition-all duration-500 
-    ${isComplete && !isSyncedPlaying ? 'grayscale brightness-50' : ''} 
-    ${isSyncedPlaying ? 'ring-2 ring-primary ring-offset-2 ring-offset-black shadow-primary/20' : ''}`;
+  const containerClasses = `relative w-full aspect-video rounded-lg overflow-hidden bg-[#0e0e10] border border-line mb-4 transition-colors duration-200
+    ${isSyncedPlaying ? 'border-ink3' : ''}`;
 
   const getVideoOpacityClass = () => {
-    if (isSyncedPlaying) return 'opacity-100'; // Playing: Full visibility
-    if (isComplete) return 'opacity-30';       // Idle Result: Darker
-    return 'opacity-40 grayscale group-hover:grayscale-0'; // Processing: Dark + Grayscale effect
+    if (isSyncedPlaying) return 'opacity-100';
+    if (isComplete) return 'opacity-60';
+    return 'opacity-40';
   };
 
   return (
     <div className={containerClasses}>
-      {/* Video Layer */}
-      <div className={`absolute inset-0 transition-all duration-700 ${getVideoOpacityClass()}`}>
+      {/* Video layer */}
+      <div className={`absolute inset-0 transition-opacity duration-200 ${getVideoOpacityClass()}`}>
         {isYouTube && videoSrc ? (
-            <iframe
+          <iframe
             ref={iframeRef}
-            className={`w-full h-full ${isSyncedPlaying ? '' : 'pointer-events-none scale-110'}`}
-            // Add enablejsapi=1 for postMessage control
+            className="w-full h-full"
             src={`https://www.youtube.com/embed/${videoSrc}?autoplay=1&mute=1&controls=0&loop=1&playlist=${videoSrc}&modestbranding=1&showinfo=0&rel=0&enablejsapi=1`}
-            title="Processing Video"
+            title="Source video"
             frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
           />
@@ -164,78 +169,23 @@ const ProcessingAnimation = ({ media, isComplete, syncedTime, isSyncedPlaying, s
             playsInline
           />
         ) : (
-          <div className="w-full h-full flex items-center justify-center bg-zinc-900">
-             <div className="w-16 h-16 border-4 border-zinc-700 border-t-zinc-500 rounded-full animate-spin"></div>
+          <div className="w-full h-full flex items-center justify-center">
+            <div className="w-5 h-5 rounded-full border-2 border-line border-t-ink3 animate-spin" />
           </div>
         )}
       </div>
 
-      {/* Overlays - Hide when synced playing so user sees clean video */}
-      {!isSyncedPlaying && !isComplete && (
-        <>
-            <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.03)_1px,transparent_1px)] bg-[size:40px_40px] z-10 pointer-events-none"></div>
-            <div className="absolute left-0 w-full h-[2px] bg-primary shadow-[0_0_15px_2px_rgba(59,130,246,0.5)] animate-[scan_2.5s_linear_infinite] z-20 pointer-events-none"></div>
-            <div className="absolute left-0 w-full h-[15%] bg-gradient-to-b from-primary/0 via-primary/5 to-primary/0 animate-[scan-overlay_2.5s_linear_infinite] z-10 pointer-events-none"></div>
-        </>
+      {!isComplete && (
+        <div className="absolute top-3 left-3 flex items-center gap-2 h-6 px-2 rounded bg-background/80 border border-line">
+          <span className="w-1.5 h-1.5 rounded-full bg-marker" />
+          <span className="timecode text-[11px]">analysing</span>
+        </div>
       )}
 
-      {/* HUD Elements - Hide when synced playing */}
-      {!isSyncedPlaying && (
-          <div className={`absolute top-4 left-4 z-30 flex items-center gap-2 px-3 py-1.5 backdrop-blur-md rounded-lg border text-xs font-mono font-bold uppercase transition-all duration-500 ${isComplete ? 'bg-green-500/10 border-green-500/20 text-green-400' : 'bg-black/60 border-primary/30 text-primary animate-pulse'}`}>
-            {isComplete ? (
-                <>
-                    <CheckCircle size={14} /> Analysis Complete
-                </>
-            ) : (
-                <>
-                    <Scan size={14} /> Scanning Content...
-                </>
-            )}
-          </div>
-      )}
-      
-      {!isSyncedPlaying && !isComplete && (
-          <div className="absolute top-4 right-4 z-30 flex items-center gap-2 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 text-white/50 text-[10px] font-mono">
-            AI_MODEL: GEMINI-2.5-PRO
-          </div>
-      )}
-      
-      {/* Visual Flair */}
-      {!isSyncedPlaying && !isComplete && (
-          <div className="absolute inset-0 pointer-events-none z-20 overflow-hidden">
-             <div className="absolute top-0 bottom-0 left-[35%] w-[1px] bg-yellow-500/20 border-r border-dashed border-yellow-500/40"></div>
-             <div className="absolute top-0 bottom-0 right-[35%] w-[1px] bg-yellow-500/20 border-l border-dashed border-yellow-500/40"></div>
-             <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-12 h-12 border border-white/20 rounded-full flex items-center justify-center">
-                <div className="w-1 h-1 bg-red-500 rounded-full animate-ping"></div>
-             </div>
-             <div className="absolute bottom-1/3 left-1/2 -translate-x-1/2 flex flex-col items-center justify-center gap-2 opacity-60">
-                 <Scissors size={24} className="text-white/20" />
-             </div>
-          </div>
-      )}
-
-       {/* Synced Playing Indicator */}
-       {isSyncedPlaying && (
-           <div className="absolute top-4 right-4 z-30 flex items-center gap-2 px-3 py-1.5 bg-red-600/90 backdrop-blur text-white rounded-lg shadow-lg animate-pulse font-bold text-[10px] uppercase tracking-wider border border-white/20">
-               <Activity size={12} /> Live Sync
-           </div>
-       )}
-      
-       {/* Bottom Info Bar */}
-      {!isSyncedPlaying && !isComplete && (
-          <div className="absolute bottom-0 left-0 right-0 p-4 bg-gradient-to-t from-black/90 to-transparent z-30 flex justify-between items-end border-t border-white/5">
-              <div className="font-mono text-[10px] text-primary/80 space-y-1">
-                 <div className="flex items-center gap-2"><Activity size={10} className="animate-bounce" /> &gt; ANALYSIS_THREAD_01: ACTIVE</div>
-                 <div className="flex items-center gap-2"><Radio size={10} /> &gt; AUDIO_TRANSCRIPT: PROCESSING</div>
-              </div>
-              <div className="flex gap-1">
-                 <div className="w-1 h-3 bg-primary/40 animate-[pulse_0.5s_infinite]"></div>
-                 <div className="w-1 h-5 bg-primary/60 animate-[pulse_0.7s_infinite]"></div>
-                 <div className="w-1 h-2 bg-primary/30 animate-[pulse_0.4s_infinite]"></div>
-                 <div className="w-1 h-4 bg-primary/80 animate-[pulse_0.6s_infinite]"></div>
-                 <div className="w-1 h-3 bg-primary/50 animate-[pulse_0.5s_infinite]"></div>
-              </div>
-          </div>
+      {isSyncedPlaying && (
+        <div className="absolute bottom-3 right-3 h-6 px-2 rounded bg-background/80 border border-line flex items-center">
+          <span className="timecode text-[11px]">synced {formatTime(syncedTime)}</span>
+        </div>
       )}
     </div>
   );

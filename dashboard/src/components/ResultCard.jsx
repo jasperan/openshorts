@@ -5,6 +5,13 @@ import SubtitleModal from './SubtitleModal';
 import HookModal from './HookModal';
 import TranslateModal from './TranslateModal';
 
+const formatTimecode = (seconds) => {
+    const total = Math.max(0, Math.floor(seconds || 0));
+    const m = Math.floor(total / 60);
+    const sec = total % 60;
+    return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+};
+
 export default function ResultCard({ clip, index, jobId, uploadPostKey, uploadUserId, onPlay, onPause }) {
     const [showModal, setShowModal] = useState(false);
     const [showSubtitleModal, setShowSubtitleModal] = useState(false);
@@ -35,7 +42,7 @@ export default function ResultCard({ clip, index, jobId, uploadPostKey, uploadUs
     // Initialize/Reset form when modal opens
     useEffect(() => {
         if (showModal) {
-            setPostTitle(clip.video_title_for_youtube_short || "Viral Short");
+            setPostTitle(clip.video_title_for_youtube_short || "Untitled clip");
             setPostDescription(clip.video_description_for_instagram || clip.video_description_for_tiktok || "");
             setIsScheduling(false);
             setScheduleDate("");
@@ -49,8 +56,7 @@ export default function ResultCard({ clip, index, jobId, uploadPostKey, uploadUs
         try {
             const res = await fetch(getApiUrl('/api/edit'), {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
+                headers: { 'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
                     job_id: jobId,
@@ -187,8 +193,7 @@ export default function ResultCard({ clip, index, jobId, uploadPostKey, uploadUs
 
             const res = await fetch(getApiUrl('/api/translate'), {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
+                headers: { 'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(requestBody)
             });
@@ -289,9 +294,9 @@ export default function ResultCard({ clip, index, jobId, uploadPostKey, uploadUs
     };
 
     return (
-        <div className="bg-surface border border-white/5 rounded-2xl overflow-hidden flex flex-col md:flex-row group hover:border-white/10 transition-all animate-[fadeIn_0.5s_ease-out] min-h-[300px] h-auto" style={{ animationDelay: `${index * 0.1}s` }}>
-            {/* Left: Video Preview (Responsive Width) */}
-            <div className="w-full md:w-[180px] lg:w-[200px] bg-black relative shrink-0 aspect-[9/16] md:aspect-auto group/video">
+        <div className="panel overflow-hidden flex flex-col md:flex-row min-h-[280px]">
+            {/* The clip */}
+            <div className="w-full md:w-[168px] lg:w-[184px] shrink-0 bg-[#0e0e10] relative aspect-[9/16] md:aspect-auto">
                 <video
                     ref={videoRef}
                     src={currentVideoUrl}
@@ -310,112 +315,108 @@ export default function ResultCard({ clip, index, jobId, uploadPostKey, uploadUs
                         }
                     }}
                 />
-                <div className="absolute top-3 left-3 flex gap-2">
-                    <span className="bg-black/60 backdrop-blur-md text-white text-[10px] font-bold px-2 py-1 rounded-md border border-white/10 uppercase tracking-wide">
-                        Clip {index + 1}
+                <div className="absolute top-2 left-2 flex items-center gap-2 h-6 px-2 rounded bg-background/85 border border-line pointer-events-none">
+                    <span className="w-1 h-1 bg-marker" aria-hidden="true" />
+                    <span className="timecode text-[11px]">{formatTimecode(clip.start)}–{formatTimecode(clip.end)}</span>
+                    <span className="flex gap-0.5" aria-hidden="true">
+                        <span className="w-0.5 h-1 bg-ink3" />
+                        <span className="w-0.5 h-1 bg-ink3" />
                     </span>
                 </div>
 
-                {/* Auto Edit Overlay if Processing */}
                 {isEditing && (
-                    <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-10 p-4 text-center">
-                        <Loader2 size={32} className="text-primary animate-spin mb-3" />
-                        <span className="text-xs font-bold text-white uppercase tracking-wider">AI Magic in Progress...</span>
-                        <span className="text-[10px] text-zinc-400 mt-1">Applying viral edits & zooms</span>
+                    <div className="absolute inset-0 bg-background/85 flex flex-col items-center justify-center gap-2 z-10 p-4 text-center">
+                        <Loader2 size={20} className="text-ink2 animate-spin" />
+                        <span className="text-[13px] text-ink">Editing clip {index + 1}</span>
+                        <span className="text-[11px] text-ink3">Colour, zooms and transitions</span>
                     </div>
                 )}
             </div>
 
-            {/* Right: Content & Details */}
-            <div className="flex-1 p-4 md:p-5 flex flex-col bg-[#121214] overflow-hidden min-w-0">
-                <div className="mb-4">
-                    <h3 className="text-base font-bold text-white leading-tight line-clamp-2 mb-2 break-words" title={clip.video_title_for_youtube_short}>
-                        {clip.video_title_for_youtube_short || "Viral Clip Generated"}
+            {/* Text and controls */}
+            <div className="flex-1 p-4 md:p-5 flex flex-col overflow-hidden min-w-0">
+                <div className="mb-3">
+                    <h3 className="text-[15px] font-medium text-ink leading-snug line-clamp-2 break-words" title={clip.video_title_for_youtube_short}>
+                        {clip.video_title_for_youtube_short || 'Clip ' + (index + 1)}
                     </h3>
-                    <div className="flex flex-wrap gap-2 text-[10px] text-zinc-500 font-mono">
-                        <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5 shrink-0">{Math.floor(clip.end - clip.start)}s</span>
-                        <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5 shrink-0">#shorts</span>
-                        <span className="bg-white/5 px-1.5 py-0.5 rounded border border-white/5 shrink-0">#viral</span>
+                    <div className="flex items-center gap-3 mt-2 timecode">
+                        <span>{Math.floor(clip.end - clip.start)}s</span>
+                        <span className="text-line">|</span>
+                        <span>9:16</span>
                     </div>
                 </div>
 
-                {/* Scrollable Descriptions Area */}
-                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-3 pr-2 mb-4">
-                    {/* YouTube */}
-                    <div className="bg-black/20 rounded-lg p-3 border border-white/5">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-red-400 mb-1.5 uppercase tracking-wider">
-                            <Youtube size={12} className="shrink-0" /> <span className="truncate">YouTube Title</span>
+                <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-1 mb-3">
+                    <div className="rounded-lg border border-line p-3">
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <Youtube size={12} className="text-ink3 shrink-0" />
+                            <span className="text-[11px] text-ink3">YouTube title</span>
                         </div>
-                        <p className="text-xs text-zinc-300 select-all break-words">
-                            {clip.video_title_for_youtube_short || "Viral Short Video"}
+                        <p className="text-[13px] text-ink2 select-all break-words">
+                            {clip.video_title_for_youtube_short || 'No title returned'}
                         </p>
                     </div>
 
-                    {/* TikTok / IG */}
-                    <div className="bg-black/20 rounded-lg p-3 border border-white/5">
-                        <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 mb-1.5 uppercase tracking-wider">
-                            <Video size={12} className="text-cyan-400 shrink-0" />
-                            <span className="text-zinc-500">/</span>
-                            <Instagram size={12} className="text-pink-400 shrink-0" />
-                            <span className="truncate">Caption</span>
+                    <div className="rounded-lg border border-line p-3">
+                        <div className="flex items-center gap-1.5 mb-1">
+                            <Instagram size={12} className="text-ink3 shrink-0" />
+                            <span className="text-[11px] text-ink3">TikTok and Reels caption</span>
                         </div>
-                        <p className="text-xs text-zinc-300 line-clamp-3 hover:line-clamp-none transition-all cursor-pointer select-all break-words">
+                        <p className="text-[13px] text-ink2 line-clamp-3 hover:line-clamp-none transition-colors cursor-pointer select-all break-words">
                             {clip.video_description_for_tiktok || clip.video_description_for_instagram}
                         </p>
                     </div>
                 </div>
 
-                {/* Error Message */}
                 {editError && (
-                    <div className="mb-3 p-2 bg-red-500/10 border border-red-500/20 text-red-400 text-[10px] rounded-lg flex items-center gap-2">
-                        <AlertCircle size={12} className="shrink-0" />
-                        {editError}
+                    <div className="mb-3 p-2 border border-line rounded-lg flex items-start gap-2">
+                        <AlertCircle size={12} className="shrink-0 text-marker mt-0.5" />
+                        <span className="text-[11px] text-ink2">{editError}</span>
                     </div>
                 )}
 
-                {/* Actions Footer */}
-                <div className="grid grid-cols-2 gap-3 mt-auto pt-4 border-t border-white/5">
+                <div className="grid grid-cols-2 gap-2 mt-auto pt-3 border-t border-line">
                     <button
                         onClick={handleAutoEdit}
                         disabled={isEditing}
-                        className="col-span-1 py-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white rounded-lg text-xs font-bold shadow-lg shadow-purple-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 mb-1 truncate px-1"
+                        className="h-8 px-2 rounded-lg bg-raised border border-line text-[12px] text-ink2 hover:text-ink hover:border-ink3 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
                     >
-                        {isEditing ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
-                        {isEditing ? 'Editing...' : 'Auto Edit'}
+                        {isEditing ? <Loader2 size={13} className="animate-spin" /> : <Wand2 size={13} />}
+                        {isEditing ? 'Editing' : 'Auto edit'}
                     </button>
 
                     <button
                         onClick={() => setShowSubtitleModal(true)}
                         disabled={isSubtitling}
-                        className="col-span-1 py-2 bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-500 hover:to-orange-500 text-white rounded-lg text-xs font-bold shadow-lg shadow-orange-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 mb-1 truncate px-1"
+                        className="h-8 px-2 rounded-lg bg-raised border border-line text-[12px] text-ink2 hover:text-ink hover:border-ink3 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
                     >
-                        {isSubtitling ? <Loader2 size={14} className="animate-spin" /> : <Type size={14} />}
-                        {isSubtitling ? 'Adding...' : 'Subtitles'}
+                        {isSubtitling ? <Loader2 size={13} className="animate-spin" /> : <Type size={13} />}
+                        {isSubtitling ? 'Adding' : 'Subtitles'}
                     </button>
 
                     <button
                         onClick={() => setShowHookModal(true)}
                         disabled={isHooking}
-                        className="col-span-1 py-2 bg-gradient-to-r from-amber-400 to-yellow-500 hover:from-amber-300 hover:to-yellow-400 text-black rounded-lg text-xs font-bold shadow-lg shadow-yellow-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 mb-1 truncate px-1"
+                        className="h-8 px-2 rounded-lg bg-raised border border-line text-[12px] text-ink2 hover:text-ink hover:border-ink3 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
                     >
-                        {isHooking ? <Loader2 size={14} className="animate-spin" /> : <Wand2 size={14} />}
-                        {isHooking ? 'Adding...' : 'Viral Hook'}
+                        {isHooking ? <Loader2 size={13} className="animate-spin" /> : <Wand2 size={13} />}
+                        {isHooking ? 'Adding' : 'Hook text'}
                     </button>
 
                     <button
                         onClick={() => setShowTranslateModal(true)}
                         disabled={isTranslating}
-                        className="col-span-1 py-2 bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-400 hover:to-teal-500 text-white rounded-lg text-xs font-bold shadow-lg shadow-green-500/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 mb-1 truncate px-1"
+                        className="h-8 px-2 rounded-lg bg-raised border border-line text-[12px] text-ink2 hover:text-ink hover:border-ink3 transition-colors flex items-center justify-center gap-1.5 disabled:opacity-40"
                     >
-                        {isTranslating ? <Loader2 size={14} className="animate-spin" /> : <Languages size={14} />}
-                        {isTranslating ? 'Translating...' : 'Dub Voice'}
+                        {isTranslating ? <Loader2 size={13} className="animate-spin" /> : <Languages size={13} />}
+                        {isTranslating ? 'Dubbing' : 'Dub voice'}
                     </button>
 
                     <button
                         onClick={() => setShowModal(true)}
-                        className="col-span-1 py-2 bg-primary hover:bg-blue-600 text-white rounded-lg text-xs font-bold shadow-lg shadow-primary/20 transition-all active:scale-[0.98] flex items-center justify-center gap-2 truncate px-2"
+                        className="h-8 px-2 rounded-lg bg-ink text-[#111113] text-[12px] font-medium hover:bg-white transition-colors flex items-center justify-center gap-1.5"
                     >
-                        <Share2 size={14} className="shrink-0" /> Post
+                        <Share2 size={13} className="shrink-0" /> Post
                     </button>
                     <button
                         onClick={async (e) => {
@@ -438,118 +439,133 @@ export default function ResultCard({ clip, index, jobId, uploadPostKey, uploadUs
                                 window.open(currentVideoUrl, '_blank');
                             }
                         }}
-                        className="col-span-1 py-2 bg-white/5 hover:bg-white/10 text-zinc-300 hover:text-white rounded-lg text-xs font-medium transition-colors flex items-center justify-center gap-2 border border-white/5 truncate px-2"
+                        className="h-8 px-2 rounded-lg border border-line text-[12px] text-ink2 hover:text-ink hover:border-ink3 transition-colors flex items-center justify-center gap-1.5"
                     >
-                        <Download size={14} className="shrink-0" /> Download
+                        <Download size={13} className="shrink-0" /> Download
                     </button>
                 </div>
             </div>
 
-            {/* Post Modal */}
+            {/* Post modal */}
             {showModal && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-[fadeIn_0.2s_ease-out]">
-                    <div className="bg-[#121214] border border-white/10 p-6 rounded-2xl w-full max-w-md shadow-2xl relative max-h-[90vh] overflow-y-auto custom-scrollbar">
-                        <button
-                            onClick={() => setShowModal(false)}
-                            className="absolute top-4 right-4 text-zinc-500 hover:text-white"
-                        >
-                            <X size={20} />
-                        </button>
-
-                        <h3 className="text-lg font-bold text-white mb-4">Post / Schedule</h3>
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/90">
+                    <div className="panel p-6 w-full max-w-md relative max-h-[90vh] overflow-y-auto custom-scrollbar">
+                        <div className="flex items-start justify-between mb-5">
+                            <div>
+                                <h3 className="text-[15px] font-medium">Post or schedule</h3>
+                                <p className="text-[13px] text-ink3 mt-1">Clip {index + 1} · {formatTimecode(clip.start)}–{formatTimecode(clip.end)}</p>
+                            </div>
+                            <button
+                                onClick={() => setShowModal(false)}
+                                className="text-ink3 hover:text-ink transition-colors"
+                                aria-label="Close"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
 
                         {!uploadPostKey && (
-                            <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 text-yellow-200 text-xs rounded-lg flex items-start gap-2">
-                                <AlertCircle size={14} className="mt-0.5 shrink-0" />
-                                <div>Configure API Key in Settings first.</div>
+                            <div className="mb-4 p-3 border border-line rounded-lg flex items-start gap-2">
+                                <AlertCircle size={13} className="mt-0.5 shrink-0 text-ink3" />
+                                <span className="text-[12px] text-ink2">Add an Upload-Post key in Settings to publish from here. Download still works.</span>
                             </div>
                         )}
 
-                        <div className="space-y-4 mb-6">
-                            {/* Title & Description */}
+                        <div className="space-y-4 mb-5">
                             <div>
-                                <label className="block text-xs font-bold text-zinc-400 mb-1">Video Title</label>
+                                <label className="block text-[12px] text-ink2 mb-1.5" htmlFor="post-title">Title</label>
                                 <input
+                                    id="post-title"
                                     type="text"
                                     value={postTitle}
                                     onChange={(e) => setPostTitle(e.target.value)}
-                                    className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-primary/50 placeholder-zinc-600"
-                                    placeholder="Enter a catchy title..."
+                                    className="input-field"
+                                    placeholder="Title for the post"
                                 />
                             </div>
 
                             <div>
-                                <label className="block text-xs font-bold text-zinc-400 mb-1">Caption / Description</label>
+                                <label className="block text-[12px] text-ink2 mb-1.5" htmlFor="post-caption">Caption</label>
                                 <textarea
+                                    id="post-caption"
                                     value={postDescription}
                                     onChange={(e) => setPostDescription(e.target.value)}
                                     rows={4}
-                                    className="w-full bg-black/40 border border-white/10 rounded-lg p-2 text-sm text-white focus:outline-none focus:border-primary/50 placeholder-zinc-600 resize-none"
-                                    placeholder="Write a caption for your post..."
+                                    className="input-field resize-none"
+                                    placeholder="Caption for the post"
                                 />
                             </div>
 
-                            {/* Scheduling */}
-                            <div className="p-3 bg-white/5 rounded-lg border border-white/5">
-                                <div className="flex items-center justify-between mb-2">
-                                    <div className="flex items-center gap-2 text-sm text-white font-medium">
-                                        <Calendar size={16} className="text-purple-400" /> Schedule Post
-                                    </div>
+                            <div className="rounded-lg border border-line p-3">
+                                <div className="flex items-center justify-between">
+                                    <span className="flex items-center gap-2 text-[13px] text-ink2">
+                                        <Calendar size={14} className="text-ink3" /> Schedule
+                                    </span>
                                     <label className="relative inline-flex items-center cursor-pointer">
                                         <input type="checkbox" checked={isScheduling} onChange={(e) => setIsScheduling(e.target.checked)} className="sr-only peer" />
-                                        <div className="w-9 h-5 bg-zinc-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+                                        <div className="w-9 h-5 bg-line rounded-full peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-[3px] after:left-[3px] after:bg-ink2 after:rounded-full after:h-3.5 after:w-3.5 after:transition-transform peer-checked:bg-ink peer-checked:after:bg-[#111113]"></div>
                                     </label>
                                 </div>
 
                                 {isScheduling && (
-                                    <div className="mt-3 animate-[fadeIn_0.2s_ease-out]">
-                                        <label className="block text-xs text-zinc-400 mb-1">Select Date & Time</label>
+                                    <div className="mt-3">
+                                        <label className="block text-[12px] text-ink2 mb-1.5" htmlFor="post-date">Date and time</label>
                                         <div className="relative">
                                             <input
+                                                id="post-date"
                                                 type="datetime-local"
                                                 value={scheduleDate}
                                                 onChange={(e) => setScheduleDate(e.target.value)}
-                                                className="w-full bg-black/40 border border-white/10 rounded-lg p-2 pl-9 text-sm text-white focus:outline-none focus:border-purple-500/50 [color-scheme:dark]"
+                                                className="input-field pl-9"
                                             />
-                                            <Clock size={14} className="absolute left-3 top-2.5 text-zinc-500" />
+                                            <Clock size={14} className="absolute left-3 top-3 text-ink3" />
                                         </div>
                                     </div>
                                 )}
                             </div>
 
-                            {/* Platforms */}
                             <div>
-                                <label className="block text-xs font-bold text-zinc-400 mb-2">Select Platforms</label>
+                                <span className="block text-[12px] text-ink2 mb-2">Platforms</span>
                                 <div className="grid grid-cols-1 gap-2">
-                                    <label className="flex items-center gap-3 p-3 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition-colors border border-white/5">
-                                        <input type="checkbox" checked={platforms.tiktok} onChange={e => setPlatforms({ ...platforms, tiktok: e.target.checked })} className="w-4 h-4 rounded border-zinc-600 bg-black/50 text-primary focus:ring-primary" />
-                                        <div className="flex items-center gap-2 text-sm text-white"><Video size={16} className="text-cyan-400" /> TikTok</div>
-                                    </label>
-                                    <label className="flex items-center gap-3 p-3 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition-colors border border-white/5">
-                                        <input type="checkbox" checked={platforms.instagram} onChange={e => setPlatforms({ ...platforms, instagram: e.target.checked })} className="w-4 h-4 rounded border-zinc-600 bg-black/50 text-primary focus:ring-primary" />
-                                        <div className="flex items-center gap-2 text-sm text-white"><Instagram size={16} className="text-pink-400" /> Instagram</div>
-                                    </label>
-                                    <label className="flex items-center gap-3 p-3 bg-white/5 rounded-lg cursor-pointer hover:bg-white/10 transition-colors border border-white/5">
-                                        <input type="checkbox" checked={platforms.youtube} onChange={e => setPlatforms({ ...platforms, youtube: e.target.checked })} className="w-4 h-4 rounded border-zinc-600 bg-black/50 text-primary focus:ring-primary" />
-                                        <div className="flex items-center gap-2 text-sm text-white"><Youtube size={16} className="text-red-400" /> YouTube Shorts</div>
-                                    </label>
+                                    {[
+                                        { key: 'tiktok', label: 'TikTok', icon: Video },
+                                        { key: 'instagram', label: 'Instagram', icon: Instagram },
+                                        { key: 'youtube', label: 'YouTube Shorts', icon: Youtube },
+                                    ].map((platform) => (
+                                        <label key={platform.key} className="flex items-center gap-3 h-10 px-3 rounded-lg border border-line cursor-pointer hover:border-ink3 transition-colors">
+                                            <input
+                                                type="checkbox"
+                                                checked={platforms[platform.key]}
+                                                onChange={(e) => setPlatforms({ ...platforms, [platform.key]: e.target.checked })}
+                                                className="w-4 h-4 rounded accent-ink"
+                                            />
+                                            <platform.icon size={14} className="text-ink3" />
+                                            <span className="text-[13px] text-ink">{platform.label}</span>
+                                        </label>
+                                    ))}
                                 </div>
                             </div>
                         </div>
 
                         {postResult && (
-                            <div className={`mb-4 p-3 rounded-lg text-xs flex items-start gap-2 ${postResult.success ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                                {postResult.success ? <CheckCircle size={14} className="mt-0.5 shrink-0" /> : <AlertCircle size={14} className="mt-0.5 shrink-0" />}
-                                <div>{postResult.msg}</div>
+                            <div className="mb-4 p-3 rounded-lg border border-line flex items-start gap-2">
+                                {postResult.success
+                                    ? <CheckCircle size={13} className="mt-0.5 shrink-0 text-ink2" />
+                                    : <AlertCircle size={13} className="mt-0.5 shrink-0 text-marker" />}
+                                <span className="text-[12px] text-ink2">{postResult.msg}</span>
                             </div>
                         )}
 
                         <button
                             onClick={handlePost}
                             disabled={posting || !uploadPostKey}
-                            className="w-full py-3 bg-primary hover:bg-primary/90 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl text-white font-bold transition-all flex items-center justify-center gap-2"
+                            className="btn-primary w-full"
                         >
-                            {posting ? <><Loader2 size={16} className="animate-spin" /> {isScheduling ? 'Scheduling...' : 'Publishing...'}</> : <><Share2 size={16} /> {isScheduling ? 'Schedule Post' : 'Publish Now'}</>}
+                            {posting ? (
+                                <><Loader2 size={15} className="animate-spin" /> {isScheduling ? 'Scheduling' : 'Publishing'}</>
+                            ) : (
+                                <><Share2 size={15} /> {isScheduling ? 'Schedule' : 'Publish now'}</>
+                            )}
                         </button>
                     </div>
                 </div>
